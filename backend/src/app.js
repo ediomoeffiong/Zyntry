@@ -100,10 +100,10 @@ app.use((err, req, res, next) => {
   let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
   let message = err.message;
 
-  // Intercept Mongoose buffering/selection timeout errors
-  if (message.includes('buffering timed out') || message.includes('selection timeout')) {
+  // Intercept Mongoose buffering/selection/config timeout errors
+  if (message.includes('buffering timed out') || message.includes('selection timeout') || message.includes('Database configuration missing')) {
     statusCode = 503;
-    message = 'Server is currently busy or connecting to database. Please try again in a few seconds.';
+    message = 'Service is temporarily unavailable. Please try again later.';
   }
 
   res.status(statusCode).json({
