@@ -91,9 +91,17 @@ if (!process.env.VERCEL) {
 
 // Basic error handler
 app.use((err, req, res, next) => {
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  let message = err.message;
+
+  // Intercept Mongoose buffering timeout errors
+  if (message.includes('buffering timed out')) {
+    statusCode = 503;
+    message = 'Server is currently busy or connecting to database. Please try again in a few seconds.';
+  }
+
   res.status(statusCode).json({
-    message: err.message,
+    message: message,
     stack: process.env.NODE_ENV === 'production' ? null : err.stack,
   });
 });
