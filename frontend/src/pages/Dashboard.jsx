@@ -28,7 +28,10 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (token) {
-      const newSocket = io('http://localhost:5000');
+      const socketUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000' 
+        : window.location.origin;
+      const newSocket = io(socketUrl);
       setSocket(newSocket);
       newSocket.on('receive_message', (message) => {
         setMessages((prev) => [...prev, message]);
@@ -42,11 +45,20 @@ const Dashboard = () => {
       navigate('/login');
     } else {
       const fetchChannels = async () => {
-        try {
-          const res = await axios.get('http://localhost:5000/api/channels', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setChannels(res.data);
+        if (token) {
+          try {
+            const apiBaseUrl = window.location.hostname === 'localhost' 
+              ? 'http://localhost:5000/api' 
+              : '/api';
+            const res = await axios.get(`${apiBaseUrl}/channels`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            setChannels(res.data);
+          } catch (err) {
+            console.error('Error fetching channels:', err);
+          }
+        }
+      };
         } catch (err) {
           console.error('Error fetching channels:', err);
         }
@@ -59,7 +71,10 @@ const Dashboard = () => {
     if (selectedChannel) {
       const fetchMessages = async () => {
         try {
-          const res = await axios.get(`http://localhost:5000/api/messages/${selectedChannel}`, {
+          const apiBaseUrl = window.location.hostname === 'localhost' 
+            ? 'http://localhost:5000/api' 
+            : '/api';
+          const res = await axios.get(`${apiBaseUrl}/messages/${selectedChannel}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           setMessages(res.data);
