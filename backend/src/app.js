@@ -11,11 +11,15 @@ const Message = require('./models/Message');
 // Load env vars
 dotenv.config();
 
-// Connect to database
-connectDB();
-
 const app = express();
 const server = http.createServer(app);
+
+// Ensure DB connection for every request (crucial for serverless)
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
+
 const io = new Server(server, {
   cors: {
     origin: 'http://localhost:5173',

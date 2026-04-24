@@ -60,7 +60,7 @@ exports.login = async (req, res) => {
         token: generateToken(user._id, user.email),
       });
     } else {
-      res.status(401).json({ message: 'Invalid credentials' });
+      res.status(401).json({ message: 'Invalid username or password' });
     }
   } catch (error) {
     res.status(500).json({ message: error.message });
