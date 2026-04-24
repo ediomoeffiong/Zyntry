@@ -43,6 +43,14 @@ app.use(cors());
 app.use('/api/auth', authRoutes);
 app.use('/api/channels', channelRoutes);
 
+app.get('/', (req, res) => {
+  res.send('Zyntry API is running...');
+});
+
+app.get('/api', (req, res) => {
+  res.json({ status: 'API is running', version: '1.0.0' });
+});
+
 // Get messages for a channel
 app.get('/api/messages/:channelId', async (req, res) => {
   try {
