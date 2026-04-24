@@ -59,10 +59,6 @@ const Dashboard = () => {
           }
         }
       };
-        } catch (err) {
-          console.error('Error fetching channels:', err);
-        }
-      };
       fetchChannels();
     }
   }, [token, navigate]);
