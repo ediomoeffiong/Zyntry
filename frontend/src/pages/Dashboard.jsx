@@ -30,7 +30,7 @@ const Dashboard = () => {
     if (token) {
       const socketUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000' 
-        : window.location.origin;
+        : 'https://zyntry.onrender.com';
       const newSocket = io(socketUrl);
       setSocket(newSocket);
       newSocket.on('receive_message', (message) => {
@@ -49,7 +49,7 @@ const Dashboard = () => {
           try {
             const apiBaseUrl = window.location.hostname === 'localhost' 
               ? 'http://localhost:5000/api' 
-              : '/api';
+              : 'https://zyntry.onrender.com/api';
             const res = await axios.get(`${apiBaseUrl}/channels`, {
               headers: { Authorization: `Bearer ${token}` }
             });
@@ -69,7 +69,7 @@ const Dashboard = () => {
         try {
           const apiBaseUrl = window.location.hostname === 'localhost' 
             ? 'http://localhost:5000/api' 
-            : '/api';
+            : 'https://zyntry.onrender.com/api';
           const res = await axios.get(`${apiBaseUrl}/messages/${selectedChannel}`, {
             headers: { Authorization: `Bearer ${token}` }
           });

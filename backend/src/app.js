@@ -28,7 +28,7 @@ app.use(async (req, res, next) => {
 
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173',
+    origin: ['http://localhost:5173', 'https://zyntry.vercel.app'],
     methods: ['GET', 'POST'],
   },
 });
@@ -107,6 +107,12 @@ if (!process.env.VERCEL) {
 app.use((err, req, res, next) => {
   let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
   let message = err.message;
+
+  // Log the actual error for the developer in the console
+  console.error('SERVER ERROR:', {
+    message: err.message,
+    stack: err.stack
+  });
 
   // Intercept Mongoose buffering/selection/config timeout errors
   if (message.includes('buffering timed out') || message.includes('selection timeout') || message.includes('Database configuration missing')) {
