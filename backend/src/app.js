@@ -11,6 +11,12 @@ const Message = require('./models/Message');
 // Load env vars
 dotenv.config();
 
+console.log('Environment Check:', {
+  MONGO_URI: process.env.MONGO_URI ? 'FOUND' : 'MISSING',
+  JWT_SECRET: process.env.JWT_SECRET ? 'FOUND' : 'MISSING',
+  NODE_ENV: process.env.NODE_ENV || 'development'
+});
+
 const app = express();
 const server = http.createServer(app);
 
