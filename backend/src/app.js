@@ -45,43 +45,45 @@ app.get('/api/messages/:channelId', async (req, res) => {
   }
 });
 
-// Socket.IO Logic
-io.on('connection', (socket) => {
-  console.log(`User connected: ${socket.id}`);
+// Socket.IO Logic (Only for non-serverless environments)
+if (!process.env.VERCEL) {
+  io.on('connection', (socket) => {
+    console.log(`User connected: ${socket.id}`);
 
-  socket.on('join_channel', (channelId) => {
-    socket.join(channelId);
-    console.log(`User ${socket.id} joined channel: ${channelId}`);
-    socket.emit('channel_joined', { channelId, message: `Successfully joined ${channelId}` });
+    socket.on('join_channel', (channelId) => {
+      socket.join(channelId);
+      console.log(`User ${socket.id} joined channel: ${channelId}`);
+      socket.emit('channel_joined', { channelId, message: `Successfully joined ${channelId}` });
+    });
+
+    socket.on('send_message', async (data) => {
+      try {
+        const { channelId, text, senderId } = data;
+
+        if (!text || !channelId) return;
+
+        // Save to DB
+        const newMessage = await Message.create({
+          channelId,
+          sender: senderId,
+          text,
+        });
+
+        // Populate sender info for broadcast
+        const populatedMessage = await Message.findById(newMessage._id).populate('sender', 'username email');
+
+        // Broadcast to room
+        io.to(channelId).emit('receive_message', populatedMessage);
+      } catch (error) {
+        console.error('Socket error:', error);
+      }
+    });
+
+    socket.on('disconnect', () => {
+      console.log(`User disconnected: ${socket.id}`);
+    });
   });
-
-  socket.on('send_message', async (data) => {
-    try {
-      const { channelId, text, senderId } = data;
-
-      if (!text || !channelId) return;
-
-      // Save to DB
-      const newMessage = await Message.create({
-        channelId,
-        sender: senderId,
-        text,
-      });
-
-      // Populate sender info for broadcast
-      const populatedMessage = await Message.findById(newMessage._id).populate('sender', 'username email');
-
-      // Broadcast to room
-      io.to(channelId).emit('receive_message', populatedMessage);
-    } catch (error) {
-      console.error('Socket error:', error);
-    }
-  });
-
-  socket.on('disconnect', () => {
-    console.log(`User disconnected: ${socket.id}`);
-  });
-});
+}
 
 // Basic error handler
 app.use((err, req, res, next) => {
@@ -94,7 +96,7 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-if (process.env.NODE_ENV !== 'production') {
+if (!process.env.VERCEL) {
   server.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
   });

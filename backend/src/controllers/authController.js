@@ -45,10 +45,12 @@ exports.register = async (req, res) => {
 // @access  Public
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body; // 'email' field can now contain username or email
 
-    // Check for user email
-    const user = await User.findOne({ email });
+    // Check for user email OR username
+    const user = await User.findOne({
+      $or: [{ email: email }, { username: email }],
+    });
 
     if (user && (await user.matchPassword(password))) {
       res.json({
@@ -58,7 +60,7 @@ exports.login = async (req, res) => {
         token: generateToken(user._id, user.email),
       });
     } else {
-      res.status(401).json({ message: 'Invalid email or password' });
+      res.status(401).json({ message: 'Invalid credentials' });
     }
   } catch (error) {
     res.status(500).json({ message: error.message });

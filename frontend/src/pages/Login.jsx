@@ -80,11 +80,11 @@ const Login = () => {
 
         <form onSubmit={onSubmit}>
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Email Address</label>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Email or Username</label>
             <input
-              type="email"
+              type="text"
               name="email"
-              placeholder="name@company.com"
+              placeholder="Email or username"
               value={email}
               onChange={onChange}
               style={{ 
