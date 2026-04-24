@@ -8,6 +8,7 @@ const Login = () => {
     password: '',
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const { email, password } = formData;
@@ -19,9 +20,11 @@ const Login = () => {
   const onSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     if (!email || !password) {
       setError('Please fill in all fields');
+      setLoading(false);
       return;
     }
 
@@ -31,41 +34,124 @@ const Login = () => {
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid email or password');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
-      <h2>Login to Zyntry</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <form onSubmit={onSubmit}>
-        <div style={{ marginBottom: '15px' }}>
-          <label>Email:</label>
-          <input
-            type="email"
-            name="email"
-            value={email}
-            onChange={onChange}
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          />
+    <div style={{ 
+      minHeight: '100vh', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      background: 'radial-gradient(circle at top right, #10b98122, transparent), radial-gradient(circle at bottom left, #0f172a, #020617)',
+      padding: '20px'
+    }}>
+      <div className="animate-fade-in" style={{ 
+        width: '100%', 
+        maxWidth: '440px', 
+        background: 'var(--glass-bg)', 
+        backdropFilter: 'blur(12px)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '24px', 
+        padding: '40px',
+        boxShadow: 'var(--shadow-premium)'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: '700', color: 'var(--primary-color)', marginBottom: '10px' }}>Zyntry</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>Welcome back! Please enter your details.</p>
         </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label>Password:</label>
-          <input
-            type="password"
-            name="password"
-            value={password}
-            onChange={onChange}
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          />
-        </div>
-        <button type="submit" style={{ width: '100%', padding: '10px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-          Login
-        </button>
-      </form>
-      <p style={{ marginTop: '15px' }}>
-        Don't have an account? <Link to="/register">Register here</Link>
-      </p>
+
+        {error && (
+          <div style={{ 
+            backgroundColor: 'rgba(239, 68, 68, 0.1)', 
+            border: '1px solid rgba(239, 68, 68, 0.2)', 
+            color: '#f87171', 
+            padding: '12px', 
+            borderRadius: '12px', 
+            marginBottom: '24px',
+            fontSize: '0.9rem',
+            textAlign: 'center'
+          }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={onSubmit}>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Email Address</label>
+            <input
+              type="email"
+              name="email"
+              placeholder="name@company.com"
+              value={email}
+              onChange={onChange}
+              style={{ 
+                width: '100%', 
+                padding: '14px 16px', 
+                backgroundColor: 'rgba(15, 23, 42, 0.5)', 
+                border: '1px solid var(--glass-border)', 
+                borderRadius: '12px',
+                color: 'white',
+                outline: 'none',
+                transition: 'var(--transition)'
+              }}
+              onFocus={(e) => e.target.style.borderColor = 'var(--primary-color)'}
+              onBlur={(e) => e.target.style.borderColor = 'var(--glass-border)'}
+            />
+          </div>
+
+          <div style={{ marginBottom: '32px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Password</label>
+            <input
+              type="password"
+              name="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={onChange}
+              style={{ 
+                width: '100%', 
+                padding: '14px 16px', 
+                backgroundColor: 'rgba(15, 23, 42, 0.5)', 
+                border: '1px solid var(--glass-border)', 
+                borderRadius: '12px',
+                color: 'white',
+                outline: 'none',
+                transition: 'var(--transition)'
+              }}
+              onFocus={(e) => e.target.style.borderColor = 'var(--primary-color)'}
+              onBlur={(e) => e.target.style.borderColor = 'var(--glass-border)'}
+            />
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={loading}
+            style={{ 
+              width: '100%', 
+              padding: '14px', 
+              backgroundColor: 'var(--primary-color)', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '12px', 
+              fontWeight: '600',
+              fontSize: '1rem',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'var(--transition)',
+              boxShadow: '0 4px 14px 0 rgba(16, 185, 129, 0.39)'
+            }}
+            onMouseOver={(e) => e.target.style.backgroundColor = 'var(--primary-hover)'}
+            onMouseOut={(e) => e.target.style.backgroundColor = 'var(--primary-color)'}
+          >
+            {loading ? 'Signing in...' : 'Sign in'}
+          </button>
+        </form>
+
+        <p style={{ marginTop: '30px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          Don't have an account? <Link to="/register" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: '600' }}>Create account</Link>
+        </p>
+      </div>
     </div>
   );
 };
