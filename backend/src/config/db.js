@@ -6,7 +6,7 @@ const connectDB = async () => {
   mongoose.set('strictQuery', true);
 
   if (!process.env.MONGO_URI) {
-    return console.log('MONGO_URI is not defined');
+    throw new Error('Database configuration missing (MONGO_URI). Please check your environment variables.');
   }
 
   if (isConnected) {
@@ -14,15 +14,14 @@ const connectDB = async () => {
   }
 
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI);
+    const conn = await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+    });
     isConnected = true;
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error(`Error: ${error.message}`);
-    // Do not exit process in production/serverless
-    if (process.env.NODE_ENV !== 'production') {
-      process.exit(1);
-    }
+    console.error(`MongoDB Connection Error: ${error.message}`);
+    throw error; // Rethrow to be caught by the calling middleware
   }
 };
 

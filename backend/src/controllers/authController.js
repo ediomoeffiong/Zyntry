@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
-exports.register = async (req, res) => {
+exports.register = async (req, res, next) => {
   try {
     const { username, email, password } = req.body;
 
@@ -36,14 +36,14 @@ exports.register = async (req, res) => {
       res.status(400).json({ message: 'Invalid user data' });
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
 // @desc    Authenticate user & get token
 // @route   POST /api/auth/login
 // @access  Public
-exports.login = async (req, res) => {
+exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body; // 'email' field can now contain username or email
 
@@ -63,7 +63,7 @@ exports.login = async (req, res) => {
       res.status(401).json({ message: 'Invalid username or password' });
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 

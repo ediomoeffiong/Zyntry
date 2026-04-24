@@ -3,7 +3,7 @@ const Channel = require('../models/Channel');
 // @desc    Create a channel
 // @route   POST /api/channels
 // @access  Private
-exports.createChannel = async (req, res) => {
+exports.createChannel = async (req, res, next) => {
   try {
     const { name } = req.body;
 
@@ -19,14 +19,14 @@ exports.createChannel = async (req, res) => {
 
     res.status(201).json(channel);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
 // @desc    Join a channel
 // @route   POST /api/channels/:channelId/join
 // @access  Private
-exports.joinChannel = async (req, res) => {
+exports.joinChannel = async (req, res, next) => {
   try {
     const channel = await Channel.findById(req.params.channelId);
 
@@ -44,18 +44,18 @@ exports.joinChannel = async (req, res) => {
 
     res.json(channel);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
 // @desc    Get user channels
 // @route   GET /api/channels
 // @access  Private
-exports.getUserChannels = async (req, res) => {
+exports.getUserChannels = async (req, res, next) => {
   try {
     const channels = await Channel.find({ members: req.user._id });
     res.json(channels);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
