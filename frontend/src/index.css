@@ -58,3 +58,47 @@ h1, h2, h3, h4 {
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out forwards;
 }
+
+/* Day 13 UI Cleanup Utilities */
+.sidebar-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-item-active {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: var(--primary-color) !important;
+  font-weight: 600;
+}
+
+.sidebar-item-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15%;
+  bottom: 15%;
+  width: 4px;
+  background-color: var(--primary-color);
+  border-radius: 0 4px 4px 0;
+}
+
+@media (max-width: 768px) {
+  .mobile-sidebar {
+    position: fixed !important;
+    z-index: 1000;
+    height: 100% !important;
+    box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+  }
+  
+  .mobile-overlay {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+  }
+}
+
+.mobile-overlay {
+  display: none;
+}

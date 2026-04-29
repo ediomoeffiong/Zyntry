@@ -102,14 +102,17 @@ if (!process.env.VERCEL) {
     socket.on('send_message', async (data) => {
       try {
         const { channelId, text } = data;
+        const trimmedText = text ? text.trim() : '';
 
-        if (!text || !channelId) return;
+        if (!trimmedText || !channelId) {
+          return socket.emit('error', { message: 'Message text and channel ID are required' });
+        }
 
         // Save to DB using authenticated user ID from socket
         const newMessage = await Message.create({
           channelId,
           sender: socket.user.id,
-          text,
+          text: trimmedText,
         });
 
         // Populate sender info for broadcast
