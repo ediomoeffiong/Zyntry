@@ -219,7 +219,16 @@ const Dashboard = () => {
   const activeChannelObj = channels.find(c => c._id === selectedChannel);
 
   return (
-    <div style={{ display: 'flex', height: '100vh', backgroundColor: 'var(--bg-dark)', color: 'var(--text-primary)', overflow: 'hidden', position: 'relative' }}>
+    <div style={{ 
+      display: 'flex', 
+      height: '100vh', 
+      minHeight: '100vh',
+      height: '100dvh', // Modern dynamic viewport height for mobile
+      backgroundColor: 'var(--bg-dark)', 
+      color: 'var(--text-primary)', 
+      overflow: 'hidden', 
+      position: 'relative' 
+    }}>
       {/* Mobile Overlay */}
       {isSidebarOpen && window.innerWidth <= 768 && (
         <div className="mobile-overlay" onClick={() => setIsSidebarOpen(false)} />

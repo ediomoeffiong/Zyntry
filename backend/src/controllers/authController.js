@@ -8,13 +8,6 @@ exports.register = async (req, res, next) => {
   try {
     const { username, email, password } = req.body;
 
-    // Check if user exists
-    const userExists = await User.findOne({ email });
-
-    if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-
     // Create user
     const user = await User.create({
       username,
@@ -22,20 +15,24 @@ exports.register = async (req, res, next) => {
       password,
     });
 
-    if (user) {
-      res.status(201).json({
-        success: true,
-        message: 'User registered successfully',
-        data: {
-          _id: user._id,
-          username: user.username,
-          email: user.email,
-        },
-      });
-    } else {
-      res.status(400).json({ message: 'Invalid user data' });
-    }
+    res.status(201).json({
+      success: true,
+      message: 'User registered successfully',
+      data: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+      },
+    });
   } catch (error) {
+    // Handle duplicate key errors (MongoDB error code 11000)
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      const message = field === 'email' 
+        ? 'Email already in use. Please try another.' 
+        : 'Username already taken. Please choose another.';
+      return res.status(400).json({ message });
+    }
     next(error);
   }
 };
