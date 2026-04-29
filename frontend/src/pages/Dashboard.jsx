@@ -17,6 +17,12 @@ const Dashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   const messagesEndRef = useRef(null);
+  const selectedChannelRef = useRef(null);
+
+  // Sync ref with state so socket listener can access current value
+  useEffect(() => {
+    selectedChannelRef.current = selectedChannel;
+  }, [selectedChannel]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -33,9 +39,14 @@ const Dashboard = () => {
         : 'https://zyntry.onrender.com';
       const newSocket = io(socketUrl);
       setSocket(newSocket);
+
       newSocket.on('receive_message', (message) => {
-        setMessages((prev) => [...prev, message]);
+        // ONLY append if it's for the currently active channel
+        if (message.channelId === selectedChannelRef.current) {
+          setMessages((prev) => [...prev, message]);
+        }
       });
+
       return () => newSocket.disconnect();
     }
   }, [token]);
@@ -45,18 +56,16 @@ const Dashboard = () => {
       navigate('/login');
     } else {
       const fetchChannels = async () => {
-        if (token) {
-          try {
-            const apiBaseUrl = window.location.hostname === 'localhost' 
-              ? 'http://localhost:5000/api' 
-              : 'https://zyntry.onrender.com/api';
-            const res = await axios.get(`${apiBaseUrl}/channels`, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            setChannels(res.data);
-          } catch (err) {
-            console.error('Error fetching channels:', err);
-          }
+        try {
+          const apiBaseUrl = window.location.hostname === 'localhost' 
+            ? 'http://localhost:5000/api' 
+            : 'https://zyntry.onrender.com/api';
+          const res = await axios.get(`${apiBaseUrl}/channels`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setChannels(res.data);
+        } catch (err) {
+          console.error('Error fetching channels:', err);
         }
       };
       fetchChannels();
