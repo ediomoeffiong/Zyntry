@@ -1,4 +1,5 @@
 const Channel = require('../models/Channel');
+const User = require('../models/User');
 
 // @desc    Create a channel
 // @route   POST /api/channels
@@ -18,6 +19,60 @@ exports.createChannel = async (req, res, next) => {
     });
 
     res.status(201).json(channel);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get or Create a DM channel
+// @route   POST /api/channels/dm
+// @access  Private
+exports.getOrCreateDM = async (req, res, next) => {
+  try {
+    const { userId, email } = req.body;
+
+    if (!userId && !email) {
+      return res.status(400).json({ message: 'Please provide a userId or email to chat with' });
+    }
+
+    let targetUserId = userId;
+
+    // If email is provided, find the user ID
+    if (email) {
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      targetUserId = user._id;
+    }
+
+    // Prevent DM with self
+    if (targetUserId.toString() === req.user._id.toString()) {
+      return res.status(400).json({ message: 'You cannot start a DM with yourself' });
+    }
+
+    // Check if DM channel already exists between both users
+    let dmChannel = await Channel.findOne({
+      isDirectMessage: true,
+      participants: { $all: [req.user._id, targetUserId] }
+    }).populate('participants', 'username email');
+
+    if (dmChannel) {
+      return res.json(dmChannel);
+    }
+
+    // Create new DM channel
+    dmChannel = await Channel.create({
+      isDirectMessage: true,
+      participants: [req.user._id, targetUserId],
+      members: [req.user._id, targetUserId],
+      createdBy: req.user._id,
+      name: 'DM' // Internal name, UI will use participants
+    });
+
+    dmChannel = await Channel.findById(dmChannel._id).populate('participants', 'username email');
+
+    res.status(201).json(dmChannel);
   } catch (error) {
     next(error);
   }
@@ -48,12 +103,14 @@ exports.joinChannel = async (req, res, next) => {
   }
 };
 
-// @desc    Get user channels
+// @desc    Get user channels (including DMs)
 // @route   GET /api/channels
 // @access  Private
 exports.getUserChannels = async (req, res, next) => {
   try {
-    const channels = await Channel.find({ members: req.user._id });
+    const channels = await Channel.find({ members: req.user._id })
+      .populate('participants', 'username email')
+      .sort({ updatedAt: -1 });
     res.json(channels);
   } catch (error) {
     next(error);

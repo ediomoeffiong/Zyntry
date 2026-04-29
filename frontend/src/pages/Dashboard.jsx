@@ -15,6 +15,8 @@ const Dashboard = () => {
   const [newMessage, setNewMessage] = useState('');
   const [socket, setSocket] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [dmEmail, setDmEmail] = useState('');
+  const [isCreatingDM, setIsCreatingDM] = useState(false);
   
   const messagesEndRef = useRef(null);
   const selectedChannelRef = useRef(null);
@@ -51,23 +53,24 @@ const Dashboard = () => {
     }
   }, [token]);
 
+  const fetchChannels = async () => {
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      const res = await axios.get(`${apiBaseUrl}/channels`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setChannels(res.data);
+    } catch (err) {
+      console.error('Error fetching channels:', err);
+    }
+  };
+
   useEffect(() => {
     if (!token) {
       navigate('/login');
     } else {
-      const fetchChannels = async () => {
-        try {
-          const apiBaseUrl = window.location.hostname === 'localhost' 
-            ? 'http://localhost:5000/api' 
-            : 'https://zyntry.onrender.com/api';
-          const res = await axios.get(`${apiBaseUrl}/channels`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setChannels(res.data);
-        } catch (err) {
-          console.error('Error fetching channels:', err);
-        }
-      };
       fetchChannels();
     }
   }, [token, navigate]);
@@ -116,6 +119,35 @@ const Dashboard = () => {
     }
   };
 
+  const startDM = async (e) => {
+    e.preventDefault();
+    if (!dmEmail.trim()) return;
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      const res = await axios.post(`${apiBaseUrl}/channels/dm`, { email: dmEmail }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setDmEmail('');
+      setIsCreatingDM(false);
+      await fetchChannels();
+      joinChannel(res.data._id);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error starting DM');
+    }
+  };
+
+  const getChannelDisplayName = (ch) => {
+    if (ch.isDirectMessage) {
+      const otherUser = ch.participants.find(p => p._id !== user.id);
+      return otherUser ? otherUser.username : 'Unknown User';
+    }
+    return ch.name;
+  };
+
+  const activeChannelObj = channels.find(c => c._id === selectedChannel);
+
   return (
     <div style={{ display: 'flex', height: '100vh', backgroundColor: 'var(--bg-dark)', color: 'var(--text-primary)', overflow: 'hidden' }}>
       {/* Sidebar */}
@@ -135,9 +167,10 @@ const Dashboard = () => {
         </div>
 
         <div style={{ padding: '24px', flex: 1, overflowY: 'auto' }}>
+          {/* Channels Section */}
           <h4 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '16px' }}>Channels</h4>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            {channels.map(ch => (
+          <ul style={{ listStyle: 'none', padding: 0, marginBottom: '24px' }}>
+            {channels.filter(ch => !ch.isDirectMessage).map(ch => (
               <li 
                 key={ch._id} 
                 onClick={() => joinChannel(ch._id)}
@@ -152,15 +185,58 @@ const Dashboard = () => {
                   transition: 'var(--transition)',
                   border: selectedChannel === ch._id ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid transparent'
                 }}
-                onMouseOver={(e) => {
-                  if (selectedChannel !== ch._id) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                }}
-                onMouseOut={(e) => {
-                  if (selectedChannel !== ch._id) e.currentTarget.style.backgroundColor = 'transparent';
-                }}
               >
                 <span style={{ marginRight: '8px', opacity: 0.5 }}>#</span>
                 {ch.name}
+              </li>
+            ))}
+          </ul>
+
+          {/* DMs Section */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h4 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>Direct Messages</h4>
+            <button 
+              onClick={() => setIsCreatingDM(!isCreatingDM)}
+              style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 'bold' }}
+              title="Start DM"
+            >+</button>
+          </div>
+
+          {isCreatingDM && (
+            <form onSubmit={startDM} style={{ marginBottom: '16px' }}>
+              <input 
+                type="email" 
+                placeholder="User email..."
+                value={dmEmail}
+                onChange={(e) => setDmEmail(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)', backgroundColor: 'var(--bg-dark)', color: 'white', outline: 'none', fontSize: '0.85rem' }}
+                autoFocus
+              />
+            </form>
+          )}
+
+          <ul style={{ listStyle: 'none', padding: 0 }}>
+            {channels.filter(ch => ch.isDirectMessage).map(ch => (
+              <li 
+                key={ch._id} 
+                onClick={() => joinChannel(ch._id)}
+                style={{ 
+                  padding: '12px 16px', 
+                  cursor: 'pointer', 
+                  backgroundColor: selectedChannel === ch._id ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                  color: selectedChannel === ch._id ? 'var(--primary-color)' : 'var(--text-primary)',
+                  borderRadius: '12px',
+                  marginBottom: '8px',
+                  fontWeight: selectedChannel === ch._id ? '600' : '400',
+                  transition: 'var(--transition)',
+                  border: selectedChannel === ch._id ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}
+              >
+                <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--primary-color)', opacity: 0.7 }}></div>
+                {getChannelDisplayName(ch)}
               </li>
             ))}
           </ul>
@@ -178,8 +254,6 @@ const Dashboard = () => {
             onClick={onLogout}
             title="Logout"
             style={{ padding: '8px', background: 'transparent', border: 'none', color: '#f87171', cursor: 'pointer', borderRadius: '8px', transition: 'var(--transition)' }}
-            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'}
-            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
           </button>
@@ -198,8 +272,8 @@ const Dashboard = () => {
                 <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
               </button>
               <h2 style={{ fontSize: '1.25rem', fontWeight: '600' }}>
-                <span style={{ color: 'var(--primary-color)', marginRight: '8px' }}>#</span>
-                {channels.find(c => c._id === selectedChannel)?.name}
+                <span style={{ color: 'var(--primary-color)', marginRight: '8px' }}>{activeChannelObj?.isDirectMessage ? '@' : '#'}</span>
+                {getChannelDisplayName(activeChannelObj)}
               </h2>
             </header>
             
@@ -252,7 +326,7 @@ const Dashboard = () => {
                   type="text" 
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder={`Message #${channels.find(c => c._id === selectedChannel)?.name}`}
+                  placeholder={`Message ${activeChannelObj?.isDirectMessage ? '@' : '#'}${getChannelDisplayName(activeChannelObj)}`}
                   style={{ 
                     flex: 1, 
                     padding: '12px 16px', 
@@ -275,8 +349,6 @@ const Dashboard = () => {
                     fontWeight: '600',
                     transition: 'var(--transition)'
                   }}
-                  onMouseOver={(e) => e.target.style.backgroundColor = 'var(--primary-hover)'}
-                  onMouseOut={(e) => e.target.style.backgroundColor = 'var(--primary-color)'}
                 >
                   Send
                 </button>
@@ -289,7 +361,7 @@ const Dashboard = () => {
               <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
             </div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>Welcome to Zyntry</h2>
-            <p style={{ maxWidth: '400px', lineHeight: '1.6' }}>Select a channel from the sidebar to join the conversation and start messaging in real-time.</p>
+            <p style={{ maxWidth: '400px', lineHeight: '1.6' }}>Select a channel or start a direct message to join the conversation and start messaging in real-time.</p>
           </div>
         )}
       </div>

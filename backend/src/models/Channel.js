@@ -4,9 +4,19 @@ const channelSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, 'Please add a channel name'],
       trim: true,
+      required: function() { return !this.isDirectMessage; }
     },
+    isDirectMessage: {
+      type: Boolean,
+      default: false,
+    },
+    participants: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

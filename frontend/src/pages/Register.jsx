@@ -26,7 +26,7 @@ const Register = () => {
     setLoading(true);
 
     if (!username || !email || !password) {
-      setError('Please fill in all fields');
+      setError('Please fill in all fields!');
       setLoading(false);
       return;
     }
