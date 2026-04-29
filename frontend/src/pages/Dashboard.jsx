@@ -13,11 +13,12 @@ const Dashboard = () => {
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [socket, setSocket] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [dmEmail, setDmEmail] = useState('');
   const [isCreatingDM, setIsCreatingDM] = useState(false);
+  const [error, setError] = useState(null);
   
+  const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
   const selectedChannelRef = useRef(null);
 
@@ -34,23 +35,44 @@ const Dashboard = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Stable socket management
   useEffect(() => {
-    if (token) {
+    if (token && !socketRef.current) {
       const socketUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000' 
         : 'https://zyntry.onrender.com';
-      const newSocket = io(socketUrl);
-      setSocket(newSocket);
+      
+      const newSocket = io(socketUrl, {
+        auth: { token }
+      });
 
       newSocket.on('receive_message', (message) => {
-        // ONLY append if it's for the currently active channel
+        // ONLY append if it's for the currently active channel AND not a duplicate
         if (message.channelId === selectedChannelRef.current) {
-          setMessages((prev) => [...prev, message]);
+          setMessages((prev) => {
+            const exists = prev.some(m => m._id === message._id);
+            if (exists) return prev;
+            return [...prev, message];
+          });
         }
       });
 
-      return () => newSocket.disconnect();
+      newSocket.on('connect_error', (err) => {
+        console.error('Socket Auth Error:', err.message);
+        if (err.message.includes('Authentication error')) {
+          onLogout();
+        }
+      });
+
+      socketRef.current = newSocket;
     }
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
   }, [token]);
 
   const fetchChannels = async () => {
@@ -62,8 +84,11 @@ const Dashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setChannels(res.data);
+      setError(null);
     } catch (err) {
       console.error('Error fetching channels:', err);
+      if (err.response?.status === 401) onLogout();
+      setError('Failed to load channels');
     }
   };
 
@@ -86,8 +111,10 @@ const Dashboard = () => {
             headers: { Authorization: `Bearer ${token}` }
           });
           setMessages(res.data);
+          setError(null);
         } catch (err) {
           console.error('Error fetching messages:', err);
+          setError('Failed to load message history');
         }
       };
       fetchMessages();
@@ -97,23 +124,25 @@ const Dashboard = () => {
   const onLogout = () => {
     removeToken();
     localStorage.removeItem('user');
+    if (socketRef.current) socketRef.current.disconnect();
     navigate('/login');
   };
 
   const joinChannel = (channelId) => {
-    if (socket) {
+    if (socketRef.current) {
+      // Clear messages immediately to avoid bleed
+      setMessages([]);
       setSelectedChannel(channelId);
-      socket.emit('join_channel', channelId);
+      socketRef.current.emit('join_channel', channelId);
     }
   };
 
   const sendMessage = (e) => {
     e.preventDefault();
-    if (socket && newMessage.trim() && selectedChannel) {
-      socket.emit('send_message', {
+    if (socketRef.current && newMessage.trim() && selectedChannel) {
+      socketRef.current.emit('send_message', {
         channelId: selectedChannel,
-        text: newMessage,
-        senderId: user.id
+        text: newMessage
       });
       setNewMessage('');
     }
@@ -134,9 +163,16 @@ const Dashboard = () => {
       await fetchChannels();
       joinChannel(res.data._id);
     } catch (err) {
-      alert(err.response?.data?.message || 'Error starting DM');
+      setError(err.response?.data?.message || 'Error starting DM');
     }
   };
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const getChannelDisplayName = (ch) => {
     if (ch.isDirectMessage) {
@@ -150,6 +186,24 @@ const Dashboard = () => {
 
   return (
     <div style={{ display: 'flex', height: '100vh', backgroundColor: 'var(--bg-dark)', color: 'var(--text-primary)', overflow: 'hidden' }}>
+      {/* Error Notification */}
+      {error && (
+        <div style={{ 
+          position: 'fixed', 
+          top: '20px', 
+          right: '20px', 
+          backgroundColor: '#f87171', 
+          color: 'white', 
+          padding: '12px 24px', 
+          borderRadius: '12px', 
+          boxShadow: 'var(--shadow-premium)', 
+          zIndex: 1000,
+          animation: 'fadeIn 0.3s ease-out'
+        }}>
+          {error}
+        </div>
+      )}
+
       {/* Sidebar */}
       <div style={{ 
         width: isSidebarOpen ? '300px' : '0', 

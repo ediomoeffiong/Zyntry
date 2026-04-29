@@ -63,37 +63,63 @@ app.get('/api/messages/:channelId', async (req, res) => {
   }
 });
 
+const jwt = require('jsonwebtoken');
+
 // Socket.IO Logic (Only for non-serverless environments)
 if (!process.env.VERCEL) {
+  // Authentication Middleware for Socket.IO
+  io.use((socket, next) => {
+    const token = socket.handshake.auth.token || socket.handshake.query.token;
+    
+    if (!token) {
+      return next(new Error('Authentication error: Token missing'));
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      socket.user = decoded; // Contains id and email
+      next();
+    } catch (err) {
+      next(new Error('Authentication error: Invalid token'));
+    }
+  });
+
   io.on('connection', (socket) => {
-    console.log(`User connected: ${socket.id}`);
+    console.log(`User connected: ${socket.user.id} (${socket.id})`);
 
     socket.on('join_channel', (channelId) => {
+      // Leave previous rooms if any (except its own id room)
+      const rooms = Array.from(socket.rooms);
+      rooms.forEach(room => {
+        if (room !== socket.id) socket.leave(room);
+      });
+
       socket.join(channelId);
-      console.log(`User ${socket.id} joined channel: ${channelId}`);
+      console.log(`User ${socket.user.id} joined channel: ${channelId}`);
       socket.emit('channel_joined', { channelId, message: `Successfully joined ${channelId}` });
     });
 
     socket.on('send_message', async (data) => {
       try {
-        const { channelId, text, senderId } = data;
+        const { channelId, text } = data;
 
         if (!text || !channelId) return;
 
-        // Save to DB
+        // Save to DB using authenticated user ID from socket
         const newMessage = await Message.create({
           channelId,
-          sender: senderId,
+          sender: socket.user.id,
           text,
         });
 
         // Populate sender info for broadcast
         const populatedMessage = await Message.findById(newMessage._id).populate('sender', 'username email');
 
-        // Broadcast to room
+        // Broadcast to room (including the sender for confirmation)
         io.to(channelId).emit('receive_message', populatedMessage);
       } catch (error) {
         console.error('Socket error:', error);
+        socket.emit('error', { message: 'Failed to send message' });
       }
     });
 
