@@ -49,6 +49,9 @@ const Dashboard = () => {
   });
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [hasSkippedCompletion, setHasSkippedCompletion] = useState(false);
+  const [isConfirmingLeave, setIsConfirmingLeave] = useState(false);
+  const [channelToLeave, setChannelToLeave] = useState(null);
+
   
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -389,23 +392,31 @@ const Dashboard = () => {
     }
   };
 
-  const handleLeaveChannel = async (e, channelId) => {
+  const handleLeaveChannel = (e, channelId) => {
     e.stopPropagation(); // Prevent selecting the channel when clicking 'x'
-    if (!window.confirm('Are you sure you want to remove this from your sidebar? Messages will not be deleted.')) return;
+    setChannelToLeave(channelId);
+    setIsConfirmingLeave(true);
+  };
+
+  const confirmLeaveChannel = async () => {
+    if (!channelToLeave) return;
     
     try {
       const apiBaseUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000/api' 
         : 'https://zyntry.onrender.com/api';
-      await axios.post(`${apiBaseUrl}/channels/${channelId}/leave`, {}, {
+      await axios.post(`${apiBaseUrl}/channels/${channelToLeave}/leave`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (selectedChannel === channelId) {
+      if (selectedChannel === channelToLeave) {
         setSelectedChannel(null);
       }
       await fetchChannels();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to leave channel');
+    } finally {
+      setIsConfirmingLeave(false);
+      setChannelToLeave(null);
     }
   };
 
@@ -1777,6 +1788,38 @@ const Dashboard = () => {
         </div>
       )}
 
+
+      {/* Custom Confirmation Modal */}
+      {isConfirmingLeave && (
+        <div className="modal-backdrop" onClick={() => setIsConfirmingLeave(false)}>
+          <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-modal-header">
+              <div style={{ 
+                width: '40px', 
+                height: '40px', 
+                borderRadius: '12px', 
+                backgroundColor: 'rgba(239, 68, 68, 0.1)', 
+                color: '#ef4444', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center' 
+              }}>
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              </div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)' }}>Remove from Sidebar</h3>
+            </div>
+            <div className="confirm-modal-body">
+              <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                Are you sure you want to remove this from your sidebar? Your message history will not be deleted and you can join back later.
+              </p>
+            </div>
+            <div className="confirm-modal-footer">
+              <button className="btn-secondary" onClick={() => setIsConfirmingLeave(false)}>Cancel</button>
+              <button className="btn-danger" onClick={confirmLeaveChannel}>Remove</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes spin {
