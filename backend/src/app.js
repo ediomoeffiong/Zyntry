@@ -5,6 +5,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 const channelRoutes = require('./routes/channelRoutes');
 const workspaceRoutes = require('./routes/workspaceRoutes');
 const Message = require('./models/Message');
@@ -42,6 +43,7 @@ app.use(cors());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/channels', channelRoutes);
 app.use('/api/workspaces', workspaceRoutes);
 

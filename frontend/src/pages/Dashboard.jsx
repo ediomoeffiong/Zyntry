@@ -33,6 +33,22 @@ const Dashboard = () => {
   const [isJoiningWorkspace, setIsJoiningWorkspace] = useState(false);
   const [publicWorkspaces, setPublicWorkspaces] = useState([]);
   const [isLoadingPublicWorkspaces, setIsLoadingPublicWorkspaces] = useState(false);
+  const [workspaceDetails, setWorkspaceDetails] = useState(null);
+  const [isInvitingUser, setIsInvitingUser] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [isProcessingApproval, setIsProcessingApproval] = useState(false);
+  const [userInvites, setUserInvites] = useState([]); // Invites for the current user across all workspaces
+  const [viewedUser, setViewedUser] = useState(null);
+  const [isViewingProfile, setIsViewingProfile] = useState(false);
+  const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
+  const [profileCompletionData, setProfileCompletionData] = useState({
+    fullName: '',
+    title: '',
+    phone: '',
+    website: ''
+  });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [hasSkippedCompletion, setHasSkippedCompletion] = useState(false);
   
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -116,6 +132,15 @@ const Dashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setChannels(res.data);
+      
+      // Auto-select general channel if no channel is selected
+      if (res.data.length > 0 && !selectedChannel) {
+        const general = res.data.find(c => c.name === 'general');
+        if (general) {
+          joinChannel(general._id);
+        }
+      }
+      
       setError(null);
     } catch (err) {
       console.error('Error fetching channels:', err);
@@ -151,17 +176,67 @@ const Dashboard = () => {
     }
   };
 
+  const fetchUserInvites = async () => {
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      const res = await axios.get(`${apiBaseUrl}/workspaces/invites/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUserInvites(res.data);
+    } catch (err) {
+      console.error('Error fetching user invites:', err);
+    }
+  };
+
+  const checkUserProfile = async () => {
+    if (!user || !user.id) return;
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      const res = await axios.get(`${apiBaseUrl}/users/${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const profile = res.data;
+      if (!profile.fullName || !profile.title) {
+        setIsProfileIncomplete(true);
+      }
+    } catch (err) {
+      console.error('Error checking user profile:', err);
+    }
+  };
+
   useEffect(() => {
     if (!token) {
       navigate('/login');
     } else {
       fetchWorkspaces();
+      fetchUserInvites();
+      checkUserProfile();
     }
   }, [token, navigate]);
+
+  const fetchWorkspaceDetails = async (id) => {
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      const res = await axios.get(`${apiBaseUrl}/workspaces/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setWorkspaceDetails(res.data);
+    } catch (err) {
+      console.error('Error fetching workspace details:', err);
+    }
+  };
 
   useEffect(() => {
     if (activeWorkspace) {
       fetchChannels();
+      fetchWorkspaceDetails(activeWorkspace);
       setSelectedChannel(null); // Clear selection when workspace changes
       setMessages([]);
     }
@@ -199,6 +274,10 @@ const Dashboard = () => {
   };
 
   const joinChannel = (channelId) => {
+    if (isProfileIncomplete) {
+      setError('Please complete your profile to join channels and send messages.');
+      return;
+    }
     if (socketRef.current) {
       // Clear messages immediately to avoid bleed
       setMessages([]);
@@ -214,6 +293,10 @@ const Dashboard = () => {
 
   const sendMessage = (e) => {
     e.preventDefault();
+    if (isProfileIncomplete) {
+      setError('Please complete your profile to send messages.');
+      return;
+    }
     const text = newMessage.trim();
     if (!text) return; // Prevent empty messages
 
@@ -383,19 +466,140 @@ const Dashboard = () => {
     }
   };
 
-  const handleJoinWorkspace = async (workspaceId) => {
+  const handleRequestToJoin = async (workspaceId) => {
     try {
       const apiBaseUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000/api' 
         : 'https://zyntry.onrender.com/api';
-      await axios.post(`${apiBaseUrl}/workspaces/${workspaceId}/join`, {}, {
+      await axios.post(`${apiBaseUrl}/workspaces/${workspaceId}/request`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      await fetchWorkspaces();
+      setError('Join request sent! Waiting for owner approval.');
       setIsJoiningWorkspace(false);
-      setActiveWorkspace(workspaceId);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to join workspace');
+      setError(err.response?.data?.message || 'Failed to send join request');
+    }
+  };
+
+  const handleInviteUser = async (e) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      await axios.post(`${apiBaseUrl}/workspaces/${activeWorkspace}/invite`, {
+        email: inviteEmail.includes('@') ? inviteEmail : undefined,
+        username: !inviteEmail.includes('@') ? inviteEmail : undefined
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setInviteEmail('');
+      setIsInvitingUser(false);
+      fetchWorkspaceDetails(activeWorkspace);
+      setError('Invite sent successfully!');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to send invite');
+    }
+  };
+
+  const handleApproveRequest = async (userId) => {
+    setIsProcessingApproval(true);
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      await axios.post(`${apiBaseUrl}/workspaces/${activeWorkspace}/approve`, { userId }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      await fetchWorkspaceDetails(activeWorkspace);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to approve request');
+    } finally {
+      setIsProcessingApproval(false);
+    }
+  };
+
+  const handleRejectRequest = async (userId) => {
+    setIsProcessingApproval(true);
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      await axios.post(`${apiBaseUrl}/workspaces/${activeWorkspace}/reject`, { userId }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      await fetchWorkspaceDetails(activeWorkspace);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to reject request');
+    } finally {
+      setIsProcessingApproval(false);
+    }
+  };
+
+  const handleAcceptInvite = async (workspaceId) => {
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      await axios.post(`${apiBaseUrl}/workspaces/invite/accept`, { workspaceId }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setError('Invite accepted! Waiting for owner approval.');
+      fetchUserInvites();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to accept invite');
+    }
+  };
+
+  const handleViewProfile = async (userId) => {
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      const res = await axios.get(`${apiBaseUrl}/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setViewedUser(res.data);
+      setIsViewingProfile(true);
+    } catch (err) {
+      setError('Failed to load user profile');
+    }
+  };
+
+  const handleCompleteProfile = async (e) => {
+    e.preventDefault();
+    console.log('Attempting to complete profile with data:', profileCompletionData);
+    if (!profileCompletionData.fullName.trim() || !profileCompletionData.title.trim()) {
+      console.warn('Profile completion failed: Name and Title are required');
+      setError('Name and Title are required');
+      return;
+    }
+    
+    setIsSavingProfile(true);
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      
+      console.log('Calling API:', `${apiBaseUrl}/users/profile`);
+      const res = await axios.put(`${apiBaseUrl}/users/profile`, profileCompletionData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log('Profile update response:', res.data);
+      setIsProfileIncomplete(false);
+      setError(null);
+      // Update local storage user info
+      const updatedUser = { ...user, fullName: profileCompletionData.fullName };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      console.log('Reloading page...');
+      window.location.reload(); // Reload to sync state everywhere
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      setError(err.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -500,7 +704,15 @@ const Dashboard = () => {
       }}>
         <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--primary-color)', marginBottom: '2px' }}>Zyntry</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--primary-color)', marginBottom: '2px' }}>Zyntry</h2>
+              {workspaceDetails?.createdBy === user?.id && (
+                <button 
+                  onClick={() => setIsInvitingUser(true)}
+                  style={{ background: 'rgba(16, 185, 129, 0.1)', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase' }}
+                >Invite</button>
+              )}
+            </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
               {workspaces.find(ws => ws._id === activeWorkspace)?.name || 'Select Workspace'}
             </p>
@@ -513,6 +725,35 @@ const Dashboard = () => {
         </div>
 
         <div style={{ padding: '16px', flex: 1, overflowY: 'auto' }}>
+          {/* Owner Approval Section */}
+          {workspaceDetails?.createdBy === user?.id && workspaceDetails?.pendingRequests?.length > 0 && (
+            <div style={{ marginBottom: '24px', backgroundColor: 'rgba(16, 185, 129, 0.05)', borderRadius: '12px', padding: '12px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+              <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--primary-color)', fontWeight: '700', marginBottom: '12px' }}>Join Requests</h4>
+              <ul style={{ listStyle: 'none', padding: 0 }}>
+                {workspaceDetails.pendingRequests.map(reqUser => (
+                  <li key={reqUser._id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: '700' }}>{reqUser.username[0].toUpperCase()}</div>
+                      <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>{reqUser.username}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        onClick={() => handleApproveRequest(reqUser._id)}
+                        disabled={isProcessingApproval}
+                        style={{ flex: 1, padding: '6px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
+                      >Approve</button>
+                      <button 
+                        onClick={() => handleRejectRequest(reqUser._id)}
+                        disabled={isProcessingApproval}
+                        style={{ flex: 1, padding: '6px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
+                      >Reject</button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Channels Section */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', marginBottom: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -671,13 +912,22 @@ const Dashboard = () => {
         </div>
 
         <div style={{ padding: '20px', borderTop: '1px solid var(--glass-border)', backgroundColor: 'rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: 'white', fontSize: '0.9rem' }}>
-              {user?.username?.[0]?.toUpperCase()}
+          <div 
+            onClick={() => navigate('/profile')}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', cursor: 'pointer', padding: '8px', borderRadius: '12px', transition: 'var(--transition)' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: 'white', fontSize: '0.9rem', overflow: 'hidden' }}>
+              {user?.profilePicture ? (
+                <img src={user.profilePicture} alt={user.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                user?.username?.[0]?.toUpperCase()
+              )}
             </div>
             <div style={{ flex: 1, overflow: 'hidden' }}>
               <p style={{ fontWeight: '600', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{user?.username}</p>
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</p>
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>View Profile</p>
             </div>
           </div>
           <button 
@@ -769,35 +1019,76 @@ const Dashboard = () => {
                   return (
                     <div key={msg._id} style={{ 
                       display: 'flex', 
-                      flexDirection: 'column',
-                      alignItems: isOwn ? 'flex-end' : 'flex-start',
-                      marginTop: showHeader ? '12px' : '2px'
+                      flexDirection: 'row',
+                      alignItems: 'flex-start',
+                      gap: '12px',
+                      marginTop: showHeader ? '16px' : '2px',
+                      paddingLeft: isOwn ? '0' : '0',
+                      paddingRight: isOwn ? '0' : '0',
+                      justifyContent: isOwn ? 'flex-end' : 'flex-start'
                     }}>
-                      {showHeader && (
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px', padding: '0 4px' }}>
-                          <span style={{ fontSize: '0.8rem', fontWeight: '700', color: isOwn ? 'var(--primary-color)' : 'var(--text-primary)' }}>
-                            {isOwn ? 'You' : msg.sender?.username}
-                          </span>
-                          <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', opacity: 0.6 }}>
-                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
+                      {!isOwn && showHeader && (
+                        <div 
+                          onClick={() => handleViewProfile(msg.sender?._id)}
+                          style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', flexShrink: 0, overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: 'white', fontSize: '0.8rem' }}
+                        >
+                          {msg.sender?.profilePicture ? (
+                            <img src={msg.sender.profilePicture} alt={msg.sender.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            msg.sender?.username?.[0]?.toUpperCase()
+                          )}
                         </div>
                       )}
+                      {!isOwn && !showHeader && <div style={{ width: '36px', flexShrink: 0 }} />}
+                      
                       <div style={{ 
-                        padding: '10px 16px', 
-                        borderRadius: '12px', 
-                        borderTopRightRadius: isOwn && showHeader ? '2px' : '12px',
-                        borderTopLeftRadius: !isOwn && showHeader ? '2px' : '12px',
-                        backgroundColor: isOwn ? 'var(--primary-color)' : 'var(--bg-card)',
-                        color: isOwn ? 'white' : 'var(--text-primary)',
-                        maxWidth: '75%',
-                        fontSize: '0.95rem',
-                        lineHeight: '1.4',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                        border: isOwn ? 'none' : '1px solid var(--glass-border)'
+                        display: 'flex', 
+                        flexDirection: 'column',
+                        alignItems: isOwn ? 'flex-end' : 'flex-start',
+                        maxWidth: '75%'
                       }}>
-                        {msg.text}
+                        {showHeader && (
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px', padding: '0 4px' }}>
+                            <span 
+                              onClick={() => !isOwn && handleViewProfile(msg.sender?._id)}
+                              style={{ fontSize: '0.8rem', fontWeight: '700', color: isOwn ? 'var(--primary-color)' : 'var(--text-primary)', cursor: isOwn ? 'default' : 'pointer' }}
+                            >
+                              {isOwn ? 'You' : msg.sender?.username}
+                            </span>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', opacity: 0.6 }}>
+                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        )}
+                        <div style={{ 
+                          padding: '10px 16px', 
+                          borderRadius: '12px', 
+                          borderTopRightRadius: isOwn && showHeader ? '2px' : '12px',
+                          borderTopLeftRadius: !isOwn && showHeader ? '2px' : '12px',
+                          backgroundColor: isOwn ? 'var(--primary-color)' : 'var(--bg-card)',
+                          color: isOwn ? 'white' : 'var(--text-primary)',
+                          fontSize: '0.95rem',
+                          lineHeight: '1.4',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          border: isOwn ? 'none' : '1px solid var(--glass-border)'
+                        }}>
+                          {msg.text}
+                        </div>
                       </div>
+
+                      {isOwn && showHeader && (
+                        <div 
+                          onClick={() => navigate('/profile')}
+                          style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', flexShrink: 0, overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: 'white', fontSize: '0.8rem' }}
+                        >
+                          {user?.profilePicture ? (
+                            <img src={user.profilePicture} alt={user.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            user?.username?.[0]?.toUpperCase()
+                          )}
+                        </div>
+                      )}
+                      {isOwn && !showHeader && <div style={{ width: '36px', flexShrink: 0 }} />}
                     </div>
                   );
                 })
@@ -837,14 +1128,14 @@ const Dashboard = () => {
                 />
                 <button 
                   type="submit"
-                  disabled={isSending || !newMessage.trim()}
+                  disabled={isSending || !newMessage.trim() || isProfileIncomplete}
                   style={{ 
                     padding: '8px 16px', 
-                    backgroundColor: (isSending || !newMessage.trim()) ? 'rgba(255,255,255,0.05)' : 'var(--primary-color)', 
-                    color: (isSending || !newMessage.trim()) ? 'var(--text-secondary)' : 'white', 
+                    backgroundColor: (isSending || !newMessage.trim() || isProfileIncomplete) ? 'rgba(255,255,255,0.05)' : 'var(--primary-color)', 
+                    color: (isSending || !newMessage.trim() || isProfileIncomplete) ? 'var(--text-secondary)' : 'white', 
                     border: 'none', 
                     borderRadius: '8px', 
-                    cursor: (isSending || !newMessage.trim()) ? 'not-allowed' : 'pointer', 
+                    cursor: (isSending || !newMessage.trim() || isProfileIncomplete) ? 'not-allowed' : 'pointer', 
                     fontWeight: '700',
                     fontSize: '0.85rem',
                     transition: 'var(--transition)',
@@ -935,8 +1226,14 @@ const Dashboard = () => {
                         <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}># {ch.name}</span>
                       </div>
                       <button 
-                        onClick={() => handleJoinPublicChannel(ch._id)}
-                        style={{ padding: '8px 16px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
+                        onClick={() => {
+                          if (isProfileIncomplete) {
+                            setError('Please complete your profile to join channels.');
+                            return;
+                          }
+                          handleJoinPublicChannel(ch._id);
+                        }}
+                        style={{ padding: '8px 16px', backgroundColor: isProfileIncomplete ? 'rgba(255,255,255,0.05)' : 'var(--primary-color)', color: isProfileIncomplete ? 'var(--text-secondary)' : 'white', border: 'none', borderRadius: '8px', cursor: isProfileIncomplete ? 'not-allowed' : 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
                       >Join</button>
                     </li>
                   ))}
@@ -1037,6 +1334,36 @@ const Dashboard = () => {
             </div>
             
             <div style={{ padding: '16px', flex: 1, overflowY: 'auto' }}>
+              {userInvites.length > 0 && (
+                <div style={{ marginBottom: '24px' }}>
+                  <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--primary-color)', fontWeight: '700', marginBottom: '12px' }}>Your Invitations</h4>
+                  <ul style={{ listStyle: 'none', padding: 0 }}>
+                    {userInvites.map(inv => (
+                      <li key={inv.workspaceId} style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        padding: '16px', 
+                        borderRadius: '12px',
+                        backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                        marginBottom: '10px',
+                        border: '1px solid rgba(16, 185, 129, 0.1)'
+                      }}>
+                        <div>
+                          <span style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '1rem' }}>{inv.workspaceName}</span>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>You've been invited!</p>
+                        </div>
+                        <button 
+                          onClick={() => handleAcceptInvite(inv.workspaceId)}
+                          style={{ padding: '8px 16px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
+                        >Accept Invite</button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '12px' }}>Discover Workspaces</h4>
               {isLoadingPublicWorkspaces ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>Loading workspaces...</div>
               ) : publicWorkspaces.length === 0 ? (
@@ -1065,9 +1392,15 @@ const Dashboard = () => {
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{ws.members?.length || 0} members</p>
                       </div>
                       <button 
-                        onClick={() => handleJoinWorkspace(ws._id)}
-                        style={{ padding: '8px 16px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
-                      >Join</button>
+                        onClick={() => {
+                          if (isProfileIncomplete) {
+                            setError('Please complete your profile to join workspaces.');
+                            return;
+                          }
+                          handleRequestToJoin(ws._id);
+                        }}
+                        style={{ padding: '8px 16px', backgroundColor: isProfileIncomplete ? 'rgba(255,255,255,0.05)' : 'var(--primary-color)', color: isProfileIncomplete ? 'var(--text-secondary)' : 'white', border: 'none', borderRadius: '8px', cursor: isProfileIncomplete ? 'not-allowed' : 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
+                      >Request to Join</button>
                     </li>
                   ))}
                 </ul>
@@ -1076,6 +1409,374 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
+      {/* View User Profile Modal */}
+      {isViewingProfile && viewedUser && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          width: '100vw', 
+          height: '100vh', 
+          backgroundColor: 'rgba(0,0,0,0.8)', 
+          backdropFilter: 'blur(8px)',
+          zIndex: 5000, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{ 
+            width: '100%', 
+            maxWidth: '450px', 
+            backgroundColor: 'var(--bg-card)', 
+            borderRadius: '24px', 
+            border: '1px solid var(--glass-border)',
+            boxShadow: 'var(--shadow-premium)',
+            overflow: 'hidden'
+          }}>
+            <div style={{ position: 'relative', height: '120px', backgroundColor: 'var(--primary-color)', opacity: 0.8 }}>
+              <button 
+                onClick={() => { setIsViewingProfile(false); setViewedUser(null); }}
+                style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(0,0,0,0.3)', border: 'none', color: 'white', cursor: 'pointer', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            
+            <div style={{ padding: '0 32px 32px', marginTop: '-48px' }}>
+              <div style={{ width: '96px', height: '96px', borderRadius: '32px', backgroundColor: 'var(--primary-color)', border: '4px solid var(--bg-card)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-premium)', marginBottom: '16px' }}>
+                {viewedUser.profilePicture ? (
+                  <img src={viewedUser.profilePicture} alt={viewedUser.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ fontSize: '2.5rem', fontWeight: '700', color: 'white' }}>{viewedUser.username?.[0]?.toUpperCase()}</span>
+                )}
+              </div>
+              
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-primary)' }}>{viewedUser.fullName || viewedUser.username}</h2>
+              {viewedUser.title && <p style={{ fontSize: '0.9rem', color: 'var(--primary-color)', fontWeight: '600', marginBottom: '16px' }}>{viewedUser.title}</p>}
+              
+              {viewedUser.description ? (
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '24px' }}>{viewedUser.description}</p>
+              ) : (
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '24px' }}>No bio provided.</p>
+              )}
+
+              <div style={{ display: 'grid', gap: '12px', padding: '16px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Username</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>@{viewedUser.username}</span>
+                </div>
+                {viewedUser.location && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Location</span>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{viewedUser.location}</span>
+                  </div>
+                )}
+                {viewedUser.company && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Company</span>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{viewedUser.company}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Force Profile Completion Modal */}
+      {isProfileIncomplete && !hasSkippedCompletion && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          width: '100vw', 
+          height: '100vh', 
+          backgroundColor: 'rgba(10, 11, 14, 0.85)', 
+          backdropFilter: 'blur(12px)',
+          zIndex: 9999, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{ 
+            width: '90%', 
+            maxWidth: '500px', 
+            backgroundColor: 'var(--bg-card)', 
+            borderRadius: '32px', 
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            padding: '48px',
+            position: 'relative',
+            overflow: 'hidden',
+            boxSizing: 'border-box'
+          }}>
+            {/* Background Accent */}
+            <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%)', zIndex: 0 }}></div>
+            
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+                <div style={{ 
+                  width: '72px', 
+                  height: '72px', 
+                  borderRadius: '24px', 
+                  background: 'linear-gradient(135deg, var(--primary-color) 0%, #059669 100%)', 
+                  color: 'white', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  margin: '0 auto 24px',
+                  boxShadow: '0 10px 20px rgba(16, 185, 129, 0.2)'
+                }}>
+                  <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                </div>
+                <h2 style={{ fontSize: '1.85rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '12px', letterSpacing: '-0.02em' }}>Complete Your Profile</h2>
+                <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.6', maxWidth: '320px', margin: '0 auto' }}>Set up your professional identity to start collaborating with your team.</p>
+                
+                {error && (
+                  <div style={{ 
+                    marginTop: '24px', 
+                    padding: '12px 16px', 
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)', 
+                    color: '#ef4444', 
+                    borderRadius: '12px', 
+                    fontSize: '0.85rem', 
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    fontWeight: '600'
+                  }}>
+                    {error}
+                  </div>
+                )}
+              </div>
+
+              <form onSubmit={handleCompleteProfile} style={{ display: 'grid', gap: '24px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '700', color: 'rgba(255,255,255,0.6)', marginLeft: '4px' }}>Full Name *</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. Jane Cooper"
+                    value={profileCompletionData.fullName}
+                    onChange={(e) => setProfileCompletionData({...profileCompletionData, fullName: e.target.value})}
+                    style={{ 
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '14px 18px', 
+                      backgroundColor: 'rgba(255,255,255,0.03)', 
+                      border: '1px solid rgba(255,255,255,0.1)', 
+                      borderRadius: '16px', 
+                      color: 'white', 
+                      outline: 'none',
+                      fontSize: '1rem',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = 'var(--primary-color)';
+                      e.target.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                      e.target.style.backgroundColor = 'rgba(255,255,255,0.03)';
+                    }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '700', color: 'rgba(255,255,255,0.6)', marginLeft: '4px' }}>Professional Title *</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. Product Designer"
+                    value={profileCompletionData.title}
+                    onChange={(e) => setProfileCompletionData({...profileCompletionData, title: e.target.value})}
+                    style={{ 
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '14px 18px', 
+                      backgroundColor: 'rgba(255,255,255,0.03)', 
+                      border: '1px solid rgba(255,255,255,0.1)', 
+                      borderRadius: '16px', 
+                      color: 'white', 
+                      outline: 'none',
+                      fontSize: '1rem',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = 'var(--primary-color)';
+                      e.target.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                      e.target.style.backgroundColor = 'rgba(255,255,255,0.03)';
+                    }}
+                  />
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: '700', color: 'rgba(255,255,255,0.6)', marginLeft: '4px' }}>Phone</label>
+                    <input 
+                      type="text" 
+                      placeholder="+1 (555) 000-0000"
+                      value={profileCompletionData.phone}
+                      onChange={(e) => setProfileCompletionData({...profileCompletionData, phone: e.target.value})}
+                      style={{ 
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        padding: '14px 18px', 
+                        backgroundColor: 'rgba(255,255,255,0.03)', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        borderRadius: '16px', 
+                        color: 'white', 
+                        outline: 'none',
+                        fontSize: '0.95rem',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = 'var(--primary-color)'}
+                      onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: '700', color: 'rgba(255,255,255,0.6)', marginLeft: '4px' }}>Website</label>
+                    <input 
+                      type="text" 
+                      placeholder="https://..."
+                      value={profileCompletionData.website}
+                      onChange={(e) => setProfileCompletionData({...profileCompletionData, website: e.target.value})}
+                      style={{ 
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        padding: '14px 18px', 
+                        backgroundColor: 'rgba(255,255,255,0.03)', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        borderRadius: '16px', 
+                        color: 'white', 
+                        outline: 'none',
+                        fontSize: '0.95rem',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = 'var(--primary-color)'}
+                      onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                  <button 
+                    type="button"
+                    onClick={() => setHasSkippedCompletion(true)}
+                    style={{ 
+                      flex: 1, 
+                      padding: '16px', 
+                      backgroundColor: 'transparent', 
+                      color: 'rgba(255,255,255,0.6)', 
+                      border: '1px solid rgba(255,255,255,0.1)', 
+                      borderRadius: '18px', 
+                      fontWeight: '700', 
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      fontSize: '0.95rem'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                      e.target.style.color = 'white';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = 'transparent';
+                      e.target.style.color = 'rgba(255,255,255,0.6)';
+                    }}
+                  >
+                    Skip for now
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={isSavingProfile}
+                    style={{ 
+                      flex: 1.5, 
+                      padding: '16px', 
+                      background: 'linear-gradient(135deg, var(--primary-color) 0%, #059669 100%)', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: '18px', 
+                      fontWeight: '800', 
+                      cursor: 'pointer', 
+                      transition: 'all 0.3s ease',
+                      fontSize: '1rem',
+                      boxShadow: '0 10px 20px rgba(16, 185, 129, 0.2)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'translateY(-2px)';
+                      e.target.style.boxShadow = '0 12px 24px rgba(16, 185, 129, 0.3)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = '0 10px 20px rgba(16, 185, 129, 0.2)';
+                    }}
+                  >
+                    {isSavingProfile ? 'Saving...' : 'Continue'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invite User Modal */}
+      {isInvitingUser && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          width: '100vw', 
+          height: '100vh', 
+          backgroundColor: 'rgba(0,0,0,0.8)', 
+          backdropFilter: 'blur(8px)',
+          zIndex: 4000, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{ 
+            width: '100%', 
+            maxWidth: '400px', 
+            backgroundColor: 'var(--bg-card)', 
+            borderRadius: '16px', 
+            border: '1px solid var(--glass-border)',
+            boxShadow: 'var(--shadow-premium)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--primary-color)' }}>Invite to Workspace</h3>
+              <button onClick={() => setIsInvitingUser(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <form onSubmit={handleInviteUser} style={{ padding: '24px' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>Enter the email or username of the person you'd like to invite.</p>
+              <input 
+                type="text" 
+                placeholder="Email or username"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--glass-border)', backgroundColor: 'var(--bg-dark)', color: 'white', outline: 'none', fontSize: '0.9rem', marginBottom: '20px' }}
+                autoFocus
+              />
+              <button 
+                type="submit"
+                style={{ width: '100%', padding: '12px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', transition: 'var(--transition)' }}
+              >
+                Send Invite
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
 
       <style>{`
         @keyframes spin {

@@ -29,6 +29,46 @@ const userSchema = new mongoose.Schema(
         ref: 'Workspace',
       },
     ],
+    fullName: {
+      type: String,
+      trim: true,
+    },
+    profilePicture: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    title: {
+      type: String,
+      trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'Description cannot exceed 200 characters'],
+    },
+    timezone: {
+      type: String,
+      trim: true,
+    },
+    contact: {
+      phone: {
+        type: String,
+        trim: true,
+      },
+      website: {
+        type: String,
+        trim: true,
+      },
+    },
+    location: {
+      type: String,
+      trim: true,
+    },
+    company: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,
@@ -36,9 +76,9 @@ const userSchema = new mongoose.Schema(
 );
 
 // Encrypt password using bcrypt
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
   if (!this.isModified('password')) {
-    next();
+    return;
   }
 
   const salt = await bcrypt.genSalt(10);

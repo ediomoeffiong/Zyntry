@@ -18,6 +18,27 @@ const workspaceSchema = new mongoose.Schema(
         ref: 'User',
       },
     ],
+    pendingRequests: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+    invites: [
+      {
+        email: String,
+        username: String,
+        invitedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+        status: {
+          type: String,
+          enum: ['pending', 'accepted', 'rejected'],
+          default: 'pending',
+        },
+      },
+    ],
   },
   {
     timestamps: true,
