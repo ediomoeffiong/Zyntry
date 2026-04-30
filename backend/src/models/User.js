@@ -23,6 +23,12 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Please add a password'],
       minlength: 6,
     },
+    workspaces: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Workspace',
+      },
+    ],
   },
   {
     timestamps: true,

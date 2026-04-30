@@ -25,6 +25,14 @@ const Dashboard = () => {
   const [isBrowsingChannels, setIsBrowsingChannels] = useState(false);
   const [publicChannels, setPublicChannels] = useState([]);
   const [isLoadingPublic, setIsLoadingPublic] = useState(false);
+  const [workspaces, setWorkspaces] = useState([]);
+  const [activeWorkspace, setActiveWorkspace] = useState(null);
+  const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState('');
+  const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false);
+  const [isJoiningWorkspace, setIsJoiningWorkspace] = useState(false);
+  const [publicWorkspaces, setPublicWorkspaces] = useState([]);
+  const [isLoadingPublicWorkspaces, setIsLoadingPublicWorkspaces] = useState(false);
   
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -98,12 +106,13 @@ const Dashboard = () => {
   }, [token]);
 
   const fetchChannels = async () => {
+    if (!activeWorkspace) return;
     setIsLoadingChannels(true);
     try {
       const apiBaseUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000/api' 
         : 'https://zyntry.onrender.com/api';
-      const res = await axios.get(`${apiBaseUrl}/channels`, {
+      const res = await axios.get(`${apiBaseUrl}/channels?workspaceId=${activeWorkspace}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setChannels(res.data);
@@ -117,13 +126,46 @@ const Dashboard = () => {
     }
   };
 
+  const fetchWorkspaces = async () => {
+    setIsLoadingWorkspaces(true);
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      const res = await axios.get(`${apiBaseUrl}/workspaces`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setWorkspaces(res.data);
+      if (res.data.length > 0) {
+        if (!activeWorkspace) {
+          setActiveWorkspace(res.data[0]._id);
+        }
+      } else {
+        setIsCreatingWorkspace(true);
+      }
+    } catch (err) {
+      console.error('Error fetching workspaces:', err);
+      setError('Failed to load workspaces');
+    } finally {
+      setIsLoadingWorkspaces(false);
+    }
+  };
+
   useEffect(() => {
     if (!token) {
       navigate('/login');
     } else {
-      fetchChannels();
+      fetchWorkspaces();
     }
   }, [token, navigate]);
+
+  useEffect(() => {
+    if (activeWorkspace) {
+      fetchChannels();
+      setSelectedChannel(null); // Clear selection when workspace changes
+      setMessages([]);
+    }
+  }, [activeWorkspace]);
 
   useEffect(() => {
     if (selectedChannel) {
@@ -194,7 +236,10 @@ const Dashboard = () => {
       const apiBaseUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000/api' 
         : 'https://zyntry.onrender.com/api';
-      const res = await axios.post(`${apiBaseUrl}/channels/dm`, { email: dmSearchQuery }, {
+      const res = await axios.post(`${apiBaseUrl}/channels/dm`, { 
+        email: dmSearchQuery,
+        workspaceId: activeWorkspace 
+      }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setDmSearchQuery('');
@@ -213,7 +258,10 @@ const Dashboard = () => {
       const apiBaseUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000/api' 
         : 'https://zyntry.onrender.com/api';
-      const res = await axios.post(`${apiBaseUrl}/channels`, { name: newChannelName }, {
+      const res = await axios.post(`${apiBaseUrl}/channels`, { 
+        name: newChannelName,
+        workspaceId: activeWorkspace
+      }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNewChannelName('');
@@ -231,7 +279,7 @@ const Dashboard = () => {
       const apiBaseUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000/api' 
         : 'https://zyntry.onrender.com/api';
-      const res = await axios.get(`${apiBaseUrl}/channels/public`, {
+      const res = await axios.get(`${apiBaseUrl}/channels/public?workspaceId=${activeWorkspace}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPublicChannels(res.data);
@@ -299,6 +347,64 @@ const Dashboard = () => {
     return ch.name;
   };
 
+  const createWorkspace = async (e) => {
+    e.preventDefault();
+    if (!newWorkspaceName.trim()) return;
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      const res = await axios.post(`${apiBaseUrl}/workspaces`, { name: newWorkspaceName }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNewWorkspaceName('');
+      setIsCreatingWorkspace(false);
+      await fetchWorkspaces();
+      setActiveWorkspace(res.data._id);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error creating workspace');
+    }
+  };
+
+  const fetchPublicWorkspaces = async () => {
+    setIsLoadingPublicWorkspaces(true);
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      const res = await axios.get(`${apiBaseUrl}/workspaces/all`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPublicWorkspaces(res.data);
+    } catch (err) {
+      setError('Failed to load available workspaces');
+    } finally {
+      setIsLoadingPublicWorkspaces(false);
+    }
+  };
+
+  const handleJoinWorkspace = async (workspaceId) => {
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      await axios.post(`${apiBaseUrl}/workspaces/${workspaceId}/join`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      await fetchWorkspaces();
+      setIsJoiningWorkspace(false);
+      setActiveWorkspace(workspaceId);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to join workspace');
+    }
+  };
+
+  useEffect(() => {
+    if (isJoiningWorkspace) {
+      fetchPublicWorkspaces();
+    }
+  }, [isJoiningWorkspace]);
+
   const activeChannelObj = channels.find(c => c._id === selectedChannel);
 
   return (
@@ -337,6 +443,48 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* Workspace Rail (Slack-style far left bar) */}
+      <div style={{ 
+        width: '72px', 
+        backgroundColor: 'var(--bg-dark)', 
+        borderRight: '1px solid var(--glass-border)',
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        padding: '16px 0', 
+        gap: '12px',
+        zIndex: 1002
+      }}>
+        {workspaces.map(ws => (
+          <div 
+            key={ws._id}
+            className={`workspace-icon ${activeWorkspace === ws._id ? 'workspace-icon-active' : ''}`}
+            onClick={() => setActiveWorkspace(ws._id)}
+            title={ws.name}
+          >
+            {ws.name.substring(0, 2).toUpperCase()}
+          </div>
+        ))}
+        
+        <button 
+          onClick={() => setIsJoiningWorkspace(true)}
+          className="workspace-icon"
+          style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}
+          title="Join Workspace"
+        >
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        </button>
+
+        <button 
+          onClick={() => setIsCreatingWorkspace(true)}
+          className="workspace-icon"
+          style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--primary-color)' }}
+          title="Create Workspace"
+        >
+          +
+        </button>
+      </div>
+
       {/* Sidebar */}
       <div className={`mobile-sidebar ${isSidebarOpen ? '' : 'sidebar-closed'}`} style={{ 
         width: isSidebarOpen ? '300px' : '0', 
@@ -353,7 +501,9 @@ const Dashboard = () => {
         <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--primary-color)', marginBottom: '2px' }}>Zyntry</h2>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Workspace</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              {workspaces.find(ws => ws._id === activeWorkspace)?.name || 'Select Workspace'}
+            </p>
           </div>
           {window.innerWidth <= 768 && (
             <button onClick={() => setIsSidebarOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -542,7 +692,25 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', minWidth: 0 }}>
-        {selectedChannel ? (
+        {!activeWorkspace ? (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', textAlign: 'center', padding: '40px', backgroundColor: 'var(--bg-dark)' }}>
+            <div style={{ width: '80px', height: '80px', borderRadius: '24px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+              <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+            </div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>Start with a Workspace</h2>
+            <p style={{ maxWidth: '400px', lineHeight: '1.6', fontSize: '0.95rem' }}>You are not in any workspaces yet. Create a new one or join an existing workspace to start chatting.</p>
+            <div style={{ display: 'flex', gap: '16px', marginTop: '24px' }}>
+              <button 
+                onClick={() => setIsCreatingWorkspace(true)}
+                style={{ padding: '12px 24px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}
+              >Create Workspace</button>
+              <button 
+                onClick={() => setIsJoiningWorkspace(true)}
+                style={{ padding: '12px 24px', backgroundColor: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}
+              >Join Workspace</button>
+            </div>
+          </div>
+        ) : selectedChannel ? (
           <>
             <header style={{ 
               padding: '16px 24px', 
@@ -768,6 +936,136 @@ const Dashboard = () => {
                       </div>
                       <button 
                         onClick={() => handleJoinPublicChannel(ch._id)}
+                        style={{ padding: '8px 16px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
+                      >Join</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Workspace Modal */}
+      {isCreatingWorkspace && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          width: '100vw', 
+          height: '100vh', 
+          backgroundColor: 'rgba(0,0,0,0.8)', 
+          backdropFilter: 'blur(8px)',
+          zIndex: 4000, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{ 
+            width: '100%', 
+            maxWidth: '400px', 
+            backgroundColor: 'var(--bg-card)', 
+            borderRadius: '16px', 
+            border: '1px solid var(--glass-border)',
+            boxShadow: 'var(--shadow-premium)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--primary-color)' }}>Create Workspace</h3>
+              <button onClick={() => setIsCreatingWorkspace(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <form onSubmit={createWorkspace} style={{ padding: '24px' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>Workspaces are the top-level container for your channels and messages.</p>
+              <input 
+                type="text" 
+                placeholder="Workspace name (e.g. Acme Corp)"
+                value={newWorkspaceName}
+                onChange={(e) => setNewWorkspaceName(e.target.value)}
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--glass-border)', backgroundColor: 'var(--bg-dark)', color: 'white', outline: 'none', fontSize: '0.9rem', marginBottom: '20px' }}
+                autoFocus
+              />
+              <button 
+                type="submit"
+                style={{ width: '100%', padding: '12px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', transition: 'var(--transition)' }}
+              >
+                Create Workspace
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Join Workspace Modal */}
+      {isJoiningWorkspace && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          width: '100vw', 
+          height: '100vh', 
+          backgroundColor: 'rgba(0,0,0,0.8)', 
+          backdropFilter: 'blur(8px)',
+          zIndex: 4000, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{ 
+            width: '100%', 
+            maxWidth: '500px', 
+            backgroundColor: 'var(--bg-card)', 
+            borderRadius: '16px', 
+            border: '1px solid var(--glass-border)',
+            boxShadow: 'var(--shadow-premium)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            maxHeight: '80vh'
+          }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--primary-color)' }}>Join Workspace</h3>
+              <button onClick={() => setIsJoiningWorkspace(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            
+            <div style={{ padding: '16px', flex: 1, overflowY: 'auto' }}>
+              {isLoadingPublicWorkspaces ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>Loading workspaces...</div>
+              ) : publicWorkspaces.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
+                  <p>No other workspaces available to join.</p>
+                  <button 
+                    onClick={() => { setIsJoiningWorkspace(false); setIsCreatingWorkspace(true); }}
+                    style={{ marginTop: '16px', background: 'transparent', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}
+                  >Create One Instead</button>
+                </div>
+              ) : (
+                <ul style={{ listStyle: 'none', padding: 0 }}>
+                  {publicWorkspaces.map(ws => (
+                    <li key={ws._id} style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      padding: '16px', 
+                      borderRadius: '12px',
+                      backgroundColor: 'rgba(255,255,255,0.02)',
+                      marginBottom: '10px',
+                      border: '1px solid var(--glass-border)'
+                    }}>
+                      <div>
+                        <span style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '1rem' }}>{ws.name}</span>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{ws.members?.length || 0} members</p>
+                      </div>
+                      <button 
+                        onClick={() => handleJoinWorkspace(ws._id)}
                         style={{ padding: '8px 16px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
                       >Join</button>
                     </li>

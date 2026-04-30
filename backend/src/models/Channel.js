@@ -28,6 +28,11 @@ const channelSchema = new mongoose.Schema(
         ref: 'User',
       },
     ],
+    workspaceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Workspace',
+      required: true,
+    },
   },
   {
     timestamps: true,

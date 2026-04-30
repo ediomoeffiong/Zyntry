@@ -6,6 +6,7 @@ const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const channelRoutes = require('./routes/channelRoutes');
+const workspaceRoutes = require('./routes/workspaceRoutes');
 const Message = require('./models/Message');
 
 // Load env vars
@@ -42,6 +43,7 @@ app.use(cors());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/channels', channelRoutes);
+app.use('/api/workspaces', workspaceRoutes);
 
 app.get('/', (req, res) => {
   res.send('Zyntry API is running...');

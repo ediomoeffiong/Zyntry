@@ -6,14 +6,15 @@ const User = require('../models/User');
 // @access  Private
 exports.createChannel = async (req, res, next) => {
   try {
-    const { name } = req.body;
+    const { name, workspaceId } = req.body;
 
-    if (!name) {
-      return res.status(400).json({ message: 'Please add a channel name' });
+    if (!name || !workspaceId) {
+      return res.status(400).json({ message: 'Please add a channel name and workspaceId' });
     }
 
     const channel = await Channel.create({
       name,
+      workspaceId,
       createdBy: req.user._id,
       members: [req.user._id],
     });
@@ -29,7 +30,11 @@ exports.createChannel = async (req, res, next) => {
 // @access  Private
 exports.getOrCreateDM = async (req, res, next) => {
   try {
-    const { userId, email } = req.body;
+    const { userId, email, workspaceId } = req.body;
+
+    if (!workspaceId) {
+      return res.status(400).json({ message: 'workspaceId is required' });
+    }
 
     if (!userId && !email) {
       return res.status(400).json({ message: 'Please provide a userId or email to chat with' });
@@ -56,9 +61,10 @@ exports.getOrCreateDM = async (req, res, next) => {
       return res.status(400).json({ message: 'You cannot start a DM with yourself' });
     }
 
-    // Check if DM channel already exists between both users
+    // Check if DM channel already exists between both users in this workspace
     let dmChannel = await Channel.findOne({
       isDirectMessage: true,
+      workspaceId,
       participants: { $all: [req.user._id, targetUserId] }
     }).populate('participants', 'username email');
 
@@ -69,6 +75,7 @@ exports.getOrCreateDM = async (req, res, next) => {
     // Create new DM channel
     dmChannel = await Channel.create({
       isDirectMessage: true,
+      workspaceId,
       participants: [req.user._id, targetUserId],
       members: [req.user._id, targetUserId],
       createdBy: req.user._id,
@@ -113,7 +120,16 @@ exports.joinChannel = async (req, res, next) => {
 // @access  Private
 exports.getUserChannels = async (req, res, next) => {
   try {
-    const channels = await Channel.find({ members: req.user._id })
+    const { workspaceId } = req.query;
+
+    if (!workspaceId) {
+      return res.status(400).json({ message: 'workspaceId query parameter is required' });
+    }
+
+    const channels = await Channel.find({ 
+      workspaceId,
+      members: req.user._id 
+    })
       .populate('participants', 'username email')
       .sort({ updatedAt: -1 });
     res.json(channels);
@@ -126,7 +142,14 @@ exports.getUserChannels = async (req, res, next) => {
 // @access  Private
 exports.getPublicChannels = async (req, res, next) => {
   try {
+    const { workspaceId } = req.query;
+
+    if (!workspaceId) {
+      return res.status(400).json({ message: 'workspaceId query parameter is required' });
+    }
+
     const channels = await Channel.find({ 
+      workspaceId,
       isDirectMessage: false,
       members: { $ne: req.user._id }
     }).sort({ name: 1 });
