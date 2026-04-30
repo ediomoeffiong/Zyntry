@@ -14,12 +14,17 @@ const Dashboard = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [dmEmail, setDmEmail] = useState('');
+  const [dmSearchQuery, setDmSearchQuery] = useState('');
   const [isCreatingDM, setIsCreatingDM] = useState(false);
   const [error, setError] = useState(null);
   const [isLoadingChannels, setIsLoadingChannels] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isCreatingChannel, setIsCreatingChannel] = useState(false);
+  const [newChannelName, setNewChannelName] = useState('');
+  const [isBrowsingChannels, setIsBrowsingChannels] = useState(false);
+  const [publicChannels, setPublicChannels] = useState([]);
+  const [isLoadingPublic, setIsLoadingPublic] = useState(false);
   
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -184,15 +189,15 @@ const Dashboard = () => {
 
   const startDM = async (e) => {
     e.preventDefault();
-    if (!dmEmail.trim()) return;
+    if (!dmSearchQuery.trim()) return;
     try {
       const apiBaseUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000/api' 
         : 'https://zyntry.onrender.com/api';
-      const res = await axios.post(`${apiBaseUrl}/channels/dm`, { email: dmEmail }, {
+      const res = await axios.post(`${apiBaseUrl}/channels/dm`, { email: dmSearchQuery }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setDmEmail('');
+      setDmSearchQuery('');
       setIsCreatingDM(false);
       await fetchChannels();
       joinChannel(res.data._id);
@@ -200,6 +205,84 @@ const Dashboard = () => {
       setError(err.response?.data?.message || 'Error starting DM');
     }
   };
+
+  const createChannel = async (e) => {
+    e.preventDefault();
+    if (!newChannelName.trim()) return;
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      const res = await axios.post(`${apiBaseUrl}/channels`, { name: newChannelName }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNewChannelName('');
+      setIsCreatingChannel(false);
+      await fetchChannels();
+      joinChannel(res.data._id);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error creating channel');
+    }
+  };
+
+  const fetchPublicChannels = async () => {
+    setIsLoadingPublic(true);
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      const res = await axios.get(`${apiBaseUrl}/channels/public`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPublicChannels(res.data);
+    } catch (err) {
+      setError('Failed to load public channels');
+    } finally {
+      setIsLoadingPublic(false);
+    }
+  };
+
+  const handleJoinPublicChannel = async (channelId) => {
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      await axios.post(`${apiBaseUrl}/channels/${channelId}/join`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      await fetchChannels();
+      setIsBrowsingChannels(false);
+      joinChannel(channelId);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to join channel');
+    }
+  };
+
+  const handleLeaveChannel = async (e, channelId) => {
+    e.stopPropagation(); // Prevent selecting the channel when clicking 'x'
+    if (!window.confirm('Are you sure you want to remove this from your sidebar? Messages will not be deleted.')) return;
+    
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api' 
+        : 'https://zyntry.onrender.com/api';
+      await axios.post(`${apiBaseUrl}/channels/${channelId}/leave`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (selectedChannel === channelId) {
+        setSelectedChannel(null);
+      }
+      await fetchChannels();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to leave channel');
+    }
+  };
+
+  useEffect(() => {
+    if (isBrowsingChannels) {
+      fetchPublicChannels();
+    }
+  }, [isBrowsingChannels]);
 
   useEffect(() => {
     if (error) {
@@ -282,8 +365,33 @@ const Dashboard = () => {
         <div style={{ padding: '16px', flex: 1, overflowY: 'auto' }}>
           {/* Channels Section */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', marginBottom: '8px' }}>
-            <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '600' }}>Channels</h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '600' }}>Channels</h4>
+              <button 
+                onClick={() => setIsBrowsingChannels(true)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: '600' }}
+                title="Browse Channels"
+              >Browse</button>
+            </div>
+            <button 
+              onClick={() => setIsCreatingChannel(!isCreatingChannel)}
+              style={{ background: 'rgba(16, 185, 129, 0.1)', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', width: '24px', height: '24px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--transition)' }}
+              title="Create Channel"
+            >+</button>
           </div>
+          
+          {isCreatingChannel && (
+            <form onSubmit={createChannel} style={{ padding: '0 16px', marginBottom: '16px' }}>
+              <input 
+                type="text" 
+                placeholder="New channel name..."
+                value={newChannelName}
+                onChange={(e) => setNewChannelName(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)', backgroundColor: 'var(--bg-dark)', color: 'white', outline: 'none', fontSize: '0.85rem' }}
+                autoFocus
+              />
+            </form>
+          )}
           
           {isLoadingChannels ? (
             <div style={{ padding: '0 16px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Loading...</div>
@@ -308,8 +416,28 @@ const Dashboard = () => {
                       alignItems: 'center'
                     }}
                   >
-                    <span style={{ marginRight: '12px', opacity: 0.5, fontSize: '1.1rem' }}>#</span>
-                    <span style={{ fontSize: '0.95rem' }}>{ch.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                      <span style={{ marginRight: '12px', opacity: 0.5, fontSize: '1.1rem' }}>#</span>
+                      <span style={{ fontSize: '0.95rem' }}>{ch.name}</span>
+                    </div>
+                    <button 
+                      onClick={(e) => handleLeaveChannel(e, ch._id)}
+                      className="cancel-btn"
+                      style={{ 
+                        background: 'transparent', 
+                        border: 'none', 
+                        color: 'var(--text-secondary)', 
+                        cursor: 'pointer', 
+                        padding: '4px',
+                        display: 'none',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: 0.6
+                      }}
+                      title="Unpin channel"
+                    >
+                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
                   </li>
                 ))
               )}
@@ -329,10 +457,10 @@ const Dashboard = () => {
           {isCreatingDM && (
             <form onSubmit={startDM} style={{ padding: '0 16px', marginBottom: '16px' }}>
               <input 
-                type="email" 
-                placeholder="User email..."
-                value={dmEmail}
-                onChange={(e) => setDmEmail(e.target.value)}
+                type="text" 
+                placeholder="User email or username..."
+                value={dmSearchQuery}
+                onChange={(e) => setDmSearchQuery(e.target.value)}
                 style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)', backgroundColor: 'var(--bg-dark)', color: 'white', outline: 'none', fontSize: '0.85rem' }}
                 autoFocus
               />
@@ -363,8 +491,28 @@ const Dashboard = () => {
                       gap: '12px'
                     }}
                   >
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--primary-color)', opacity: selectedChannel === ch._id ? 1 : 0.4 }}></div>
-                    <span style={{ fontSize: '0.95rem' }}>{getChannelDisplayName(ch)}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--primary-color)', opacity: selectedChannel === ch._id ? 1 : 0.4 }}></div>
+                      <span style={{ fontSize: '0.95rem' }}>{getChannelDisplayName(ch)}</span>
+                    </div>
+                    <button 
+                      onClick={(e) => handleLeaveChannel(e, ch._id)}
+                      className="cancel-btn"
+                      style={{ 
+                        background: 'transparent', 
+                        border: 'none', 
+                        color: 'var(--text-secondary)', 
+                        cursor: 'pointer', 
+                        padding: '4px',
+                        display: 'none',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: 0.6
+                      }}
+                      title="Unpin chat"
+                    >
+                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
                   </li>
                 ))
               )}
@@ -560,6 +708,77 @@ const Dashboard = () => {
         )}
       </div>
 
+      {/* Browse Channels Modal */}
+      {isBrowsingChannels && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          width: '100vw', 
+          height: '100vh', 
+          backgroundColor: 'rgba(0,0,0,0.8)', 
+          backdropFilter: 'blur(8px)',
+          zIndex: 3000, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{ 
+            width: '100%', 
+            maxWidth: '500px', 
+            backgroundColor: 'var(--bg-card)', 
+            borderRadius: '16px', 
+            border: '1px solid var(--glass-border)',
+            boxShadow: 'var(--shadow-premium)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            maxHeight: '80vh'
+          }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--primary-color)' }}>Browse Channels</h3>
+              <button onClick={() => setIsBrowsingChannels(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            
+            <div style={{ padding: '16px', flex: 1, overflowY: 'auto' }}>
+              {isLoadingPublic ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>Loading channels...</div>
+              ) : publicChannels.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
+                  <p>No new channels found.</p>
+                </div>
+              ) : (
+                <ul style={{ listStyle: 'none', padding: 0 }}>
+                  {publicChannels.map(ch => (
+                    <li key={ch._id} style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      padding: '12px 16px', 
+                      borderRadius: '12px',
+                      backgroundColor: 'rgba(255,255,255,0.02)',
+                      marginBottom: '8px',
+                      border: '1px solid var(--glass-border)'
+                    }}>
+                      <div>
+                        <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}># {ch.name}</span>
+                      </div>
+                      <button 
+                        onClick={() => handleJoinPublicChannel(ch._id)}
+                        style={{ padding: '8px 16px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
+                      >Join</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
@@ -567,6 +786,13 @@ const Dashboard = () => {
         .sidebar-closed {
           width: 0 !important;
           min-width: 0 !important;
+        }
+        .sidebar-item:hover .cancel-btn {
+          display: flex !important;
+        }
+        .cancel-btn:hover {
+          color: #ef4444 !important;
+          opacity: 1 !important;
         }
       `}</style>
     </div>

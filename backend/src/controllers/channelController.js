@@ -37,9 +37,14 @@ exports.getOrCreateDM = async (req, res, next) => {
 
     let targetUserId = userId;
 
-    // If email is provided, find the user ID
+    // If email is provided, find the user ID (now supports username too)
     if (email) {
-      const user = await User.findOne({ email });
+      const user = await User.findOne({
+        $or: [
+          { email: email },
+          { username: email }
+        ]
+      });
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -112,6 +117,44 @@ exports.getUserChannels = async (req, res, next) => {
       .populate('participants', 'username email')
       .sort({ updatedAt: -1 });
     res.json(channels);
+  } catch (error) {
+    next(error);
+  }
+};
+// @desc    Get all public channels (excluding DMs and joined channels)
+// @route   GET /api/channels/public
+// @access  Private
+exports.getPublicChannels = async (req, res, next) => {
+  try {
+    const channels = await Channel.find({ 
+      isDirectMessage: false,
+      members: { $ne: req.user._id }
+    }).sort({ name: 1 });
+    res.json(channels);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Leave a channel (Unpin)
+// @route   POST /api/channels/:channelId/leave
+// @access  Private
+exports.leaveChannel = async (req, res, next) => {
+  try {
+    const channel = await Channel.findById(req.params.channelId);
+
+    if (!channel) {
+      return res.status(404).json({ message: 'Channel not found' });
+    }
+
+    // Remove user from members
+    channel.members = channel.members.filter(
+      (memberId) => memberId.toString() !== req.user._id.toString()
+    );
+    
+    await channel.save();
+
+    res.json({ message: 'Left channel successfully' });
   } catch (error) {
     next(error);
   }
