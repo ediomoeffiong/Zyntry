@@ -19,7 +19,12 @@ const Profile = () => {
       website: ''
     },
     location: '',
-    company: ''
+    company: '',
+    status: 'online',
+    customStatus: {
+      text: '',
+      emoji: ''
+    }
   });
   
   const [isEditing, setIsEditing] = useState(false);
@@ -85,6 +90,7 @@ const Profile = () => {
         ? 'http://localhost:5000/api' 
         : 'https://zyntry.onrender.com/api';
         
+      // 1. Update basic profile info
       await axios.put(`${apiBaseUrl}/users/profile`, {
         ...profile,
         phone: profile.contact.phone,
@@ -92,12 +98,37 @@ const Profile = () => {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      // 2. Update status
+      await axios.put(`${apiBaseUrl}/users/status`, { 
+        status: profile.status 
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // 3. Update custom status
+      await axios.put(`${apiBaseUrl}/users/custom-status`, { 
+        text: profile.customStatus.text,
+        emoji: profile.customStatus.emoji
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
-      setSuccess('Profile updated successfully!');
+      setSuccess('Profile and status updated successfully!');
       setIsEditing(false);
-      // Update local storage user info if needed
-      const updatedUser = { ...currentUser, profilePicture: profile.profilePicture };
+      
+      // Update local storage user info
+      const updatedUser = { 
+        ...currentUser, 
+        profilePicture: profile.profilePicture,
+        fullName: profile.fullName,
+        status: profile.status,
+        customStatus: profile.customStatus
+      };
       localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      // Trigger a fetch to be sure
+      fetchProfile();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update profile');
     } finally {
@@ -152,6 +183,29 @@ const Profile = () => {
                 <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '32px' }}>No bio provided yet.</p>
               )}
 
+              <div style={{ padding: '24px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid var(--glass-border)', marginBottom: '32px', textAlign: 'left' }}>
+                <h3 style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>Presence & Status</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{ 
+                    width: '12px', 
+                    height: '12px', 
+                    borderRadius: '50%', 
+                    backgroundColor: profile.status === 'online' ? '#10b981' : 'transparent',
+                    boxShadow: profile.status === 'away' ? 'inset 0 0 0 2px var(--text-secondary)' : 'none',
+                    border: profile.status === 'online' ? 'none' : '1px solid var(--text-secondary)'
+                  }}></div>
+                  <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                    {profile.status === 'online' ? 'Online' : 'Away'}
+                  </span>
+                </div>
+                {profile.customStatus?.text && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: 'rgba(16, 185, 129, 0.08)', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                    {profile.customStatus.emoji && <span style={{ fontSize: '1.2rem' }}>{profile.customStatus.emoji}</span>}
+                    <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>{profile.customStatus.text}</span>
+                  </div>
+                )}
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', textAlign: 'left', marginBottom: '40px' }}>
                 <div className="profile-info-item">
                   <span className="label">Email</span>
@@ -161,37 +215,37 @@ const Profile = () => {
                   <span className="label">Username</span>
                   <span className="value">@{profile.username}</span>
                 </div>
-                {profile.location && (
-                  <div className="profile-info-item">
-                    <span className="label">Location</span>
-                    <span className="value">{profile.location}</span>
-                  </div>
-                )}
-                {profile.timezone && (
-                  <div className="profile-info-item">
-                    <span className="label">Timezone</span>
-                    <span className="value">{profile.timezone}</span>
-                  </div>
-                )}
-                {profile.company && (
-                  <div className="profile-info-item">
-                    <span className="label">Company</span>
-                    <span className="value">{profile.company}</span>
-                  </div>
-                )}
-                {profile.contact.website && (
-                  <div className="profile-info-item">
-                    <span className="label">Website</span>
+                <div className="profile-info-item">
+                  <span className="label">Location</span>
+                  <span className="value">{profile.location || 'Not set'}</span>
+                </div>
+                <div className="profile-info-item">
+                  <span className="label">Timezone</span>
+                  <span className="value">{profile.timezone || 'Not set'}</span>
+                </div>
+                <div className="profile-info-item">
+                  <span className="label">Company</span>
+                  <span className="value">{profile.company || 'Not set'}</span>
+                </div>
+                <div className="profile-info-item">
+                  <span className="label">Phone</span>
+                  <span className="value">{profile.contact.phone || 'Not set'}</span>
+                </div>
+                <div className="profile-info-item" style={{ gridColumn: 'span 2' }}>
+                  <span className="label">Website</span>
+                  {profile.contact.website ? (
                     <a href={profile.contact.website} target="_blank" rel="noopener noreferrer" className="value" style={{ color: 'var(--primary-color)', textDecoration: 'none' }}>{profile.contact.website.replace(/^https?:\/\//, '')}</a>
-                  </div>
-                )}
+                  ) : (
+                    <span className="value">Not set</span>
+                  )}
+                </div>
               </div>
 
               <button 
                 onClick={() => setIsEditing(true)}
-                style={{ width: '100%', padding: '14px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', transition: 'var(--transition)' }}
+                style={{ width: '100%', padding: '14px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', transition: 'var(--transition)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)' }}
               >
-                Edit Profile
+                Edit Profile & Status
               </button>
             </div>
           ) : (
@@ -236,6 +290,60 @@ const Profile = () => {
                 <div className="form-group">
                   <label>Phone Number</label>
                   <input type="text" name="contact.phone" value={profile.contact.phone} onChange={handleChange} placeholder="+1 (555) 000-0000" />
+                </div>
+
+                <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--glass-border)' }}>
+                  <h3 style={{ fontSize: '0.9rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '20px' }}>Presence Settings</h3>
+                  
+                  <div className="form-group" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                    <div>
+                      <label style={{ marginBottom: '4px', display: 'block' }}>Set yourself as Away</label>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>You will appear away to others even while active.</span>
+                    </div>
+                    <div 
+                      onClick={() => setProfile(prev => ({ ...prev, status: prev.status === 'away' ? 'online' : 'away' }))}
+                      style={{ 
+                        width: '44px', 
+                        height: '24px', 
+                        backgroundColor: profile.status === 'away' ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)', 
+                        borderRadius: '12px', 
+                        position: 'relative', 
+                        cursor: 'pointer', 
+                        transition: 'all 0.3s ease' 
+                      }}
+                    >
+                      <div style={{ 
+                        width: '18px', 
+                        height: '18px', 
+                        backgroundColor: 'white', 
+                        borderRadius: '50%', 
+                        position: 'absolute', 
+                        top: '3px', 
+                        left: profile.status === 'away' ? '23px' : '3px', 
+                        transition: 'all 0.3s ease' 
+                      }}></div>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '24px' }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '12px' }}>Custom Status</label>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <input 
+                        type="text" 
+                        placeholder="Emoji" 
+                        value={profile.customStatus.emoji} 
+                        onChange={(e) => setProfile(prev => ({ ...prev, customStatus: { ...prev.customStatus, emoji: e.target.value } }))}
+                        style={{ width: '80px' }} 
+                      />
+                      <input 
+                        type="text" 
+                        placeholder="What's your status?" 
+                        value={profile.customStatus.text} 
+                        onChange={(e) => setProfile(prev => ({ ...prev, customStatus: { ...prev.customStatus, text: e.target.value } }))}
+                        style={{ flex: 1 }} 
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 

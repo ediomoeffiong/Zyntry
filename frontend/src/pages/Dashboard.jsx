@@ -8,7 +8,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const token = getToken();
   const user = getUser();
-  
+
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -43,21 +43,13 @@ const Dashboard = () => {
   const [userInvites, setUserInvites] = useState([]); // Invites for the current user across all workspaces
   const [viewedUser, setViewedUser] = useState(null);
   const [isViewingProfile, setIsViewingProfile] = useState(false);
-  const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
-  const [profileCompletionData, setProfileCompletionData] = useState({
-    fullName: '',
-    title: '',
-    phone: '',
-    website: ''
-  });
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [hasSkippedCompletion, setHasSkippedCompletion] = useState(false);
+
   const [isConfirmingLeave, setIsConfirmingLeave] = useState(false);
   const [channelToLeave, setChannelToLeave] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState({ channels: [], users: [] });
-  const [isFindingWorkspaces, setIsFindingWorkspaces] = useState(false);
+
   const [lookupSlug, setLookupSlug] = useState('');
   const [workspacePreview, setWorkspacePreview] = useState(null);
   const [isSearchingEmail, setIsSearchingEmail] = useState(false);
@@ -66,16 +58,9 @@ const Dashboard = () => {
   const [mentionSuggestions, setMentionSuggestions] = useState([]);
   const [mentionQuery, setMentionQuery] = useState('');
   const [showMentions, setShowMentions] = useState(false);
-  const [statusText, setStatusText] = useState('');
-  const [statusEmoji, setStatusEmoji] = useState('');
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  useEffect(() => {
-    if (user?.customStatus) {
-      setStatusText(user.customStatus.text || '');
-      setStatusEmoji(user.customStatus.emoji || '');
-    }
-  }, [user]);
+
+
   const [isWorkspaceSettingsOpen, setIsWorkspaceSettingsOpen] = useState(false);
 
   // Notifications State
@@ -85,7 +70,7 @@ const Dashboard = () => {
 
 
 
-  
+
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
   const selectedChannelRef = useRef(null);
@@ -106,10 +91,10 @@ const Dashboard = () => {
   // Stable socket management
   useEffect(() => {
     if (token && !socketRef.current) {
-      const socketUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000' 
+      const socketUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000'
         : 'https://zyntry.onrender.com';
-      
+
       const newSocket = io(socketUrl, {
         auth: { token }
       });
@@ -192,17 +177,17 @@ const Dashboard = () => {
     if (!activeWorkspace) return;
     setIsLoadingChannels(true);
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/channels?workspaceId=${activeWorkspace}`, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'x-workspace-id': activeWorkspace
         }
       });
       setChannels(res.data);
-      
+
       // Auto-select general channel if no channel is selected
       if (res.data.length > 0 && !selectedChannel) {
         const general = res.data.find(c => c.name === 'general');
@@ -210,7 +195,7 @@ const Dashboard = () => {
           joinChannel(general._id);
         }
       }
-      
+
       setError(null);
     } catch (err) {
       console.error('Error fetching channels:', err);
@@ -224,14 +209,14 @@ const Dashboard = () => {
   const fetchWorkspaces = async () => {
     setIsLoadingWorkspaces(true);
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/workspaces`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setWorkspaces(res.data);
-      
+
       // If we have an active workspace set in state, verify it still exists in the fetched list
       if (activeWorkspace && !res.data.some(ws => ws._id === activeWorkspace)) {
         setActiveWorkspace(null);
@@ -251,8 +236,8 @@ const Dashboard = () => {
 
   const fetchUserInvites = async () => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/workspaces/invites/me`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -263,24 +248,7 @@ const Dashboard = () => {
     }
   };
 
-  const checkUserProfile = async () => {
-    if (!user || !user.id) return;
-    try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
-        : 'https://zyntry.onrender.com/api';
-      const res = await axios.get(`${apiBaseUrl}/users/${user.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      const profile = res.data;
-      if (!profile.fullName || !profile.title) {
-        setIsProfileIncomplete(true);
-      }
-    } catch (err) {
-      console.error('Error checking user profile:', err);
-    }
-  };
+
 
   useEffect(() => {
     if (!token) {
@@ -288,7 +256,6 @@ const Dashboard = () => {
     } else {
       fetchWorkspaces();
       fetchUserInvites();
-      checkUserProfile();
       fetchNotifications();
 
       // Handle invite links (?invite=slug)
@@ -326,11 +293,11 @@ const Dashboard = () => {
     }
 
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/search?q=${query}&workspaceId=${activeWorkspace}`, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'x-workspace-id': activeWorkspace
         }
@@ -345,8 +312,8 @@ const Dashboard = () => {
     e.preventDefault();
     if (!lookupSlug.trim()) return;
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/workspaces/lookup/${lookupSlug}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -378,8 +345,8 @@ const Dashboard = () => {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       const res = await axios.post(`${apiBaseUrl}/workspaces/find`, { email: inviteEmail }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -393,8 +360,8 @@ const Dashboard = () => {
 
   const fetchWorkspaceDetails = async (id) => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/workspaces/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -422,11 +389,11 @@ const Dashboard = () => {
       const fetchMessages = async () => {
         setIsLoadingMessages(true);
         try {
-          const apiBaseUrl = window.location.hostname === 'localhost' 
-            ? 'http://localhost:5000/api' 
+          const apiBaseUrl = window.location.hostname === 'localhost'
+            ? 'http://localhost:5000/api'
             : 'https://zyntry.onrender.com/api';
           const res = await axios.get(`${apiBaseUrl}/messages/${selectedChannel}`, {
-            headers: { 
+            headers: {
               Authorization: `Bearer ${token}`,
               'x-workspace-id': activeWorkspace
             }
@@ -448,7 +415,7 @@ const Dashboard = () => {
     try {
       const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/notifications`, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'x-workspace-id': activeWorkspace
         }
@@ -477,7 +444,7 @@ const Dashboard = () => {
     try {
       const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
       await axios.put(`${apiBaseUrl}/notifications/read-all`, {}, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'x-workspace-id': activeWorkspace
         }
@@ -522,16 +489,13 @@ const Dashboard = () => {
   };
 
   const joinChannel = (channelId) => {
-    if (isProfileIncomplete) {
-      setError('Please complete your profile to join channels and send messages.');
-      return;
-    }
+
     if (socketRef.current) {
       // Clear messages immediately to avoid bleed
       setMessages([]);
       setSelectedChannel(channelId);
       socketRef.current.emit('join_channel', channelId);
-      
+
       // Auto-hide sidebar on mobile after selection
       if (window.innerWidth <= 768) {
         setIsSidebarOpen(false);
@@ -541,10 +505,7 @@ const Dashboard = () => {
 
   const sendMessage = (e) => {
     e.preventDefault();
-    if (isProfileIncomplete) {
-      setError('Please complete your profile to send messages.');
-      return;
-    }
+
     const text = newMessage.trim();
     if (!text) return; // Prevent empty messages
 
@@ -564,14 +525,14 @@ const Dashboard = () => {
     e.preventDefault();
     if (!dmSearchQuery.trim()) return;
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
-      const res = await axios.post(`${apiBaseUrl}/channels/dm`, { 
+      const res = await axios.post(`${apiBaseUrl}/channels/dm`, {
         email: dmSearchQuery,
-        workspaceId: activeWorkspace 
+        workspaceId: activeWorkspace
       }, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'x-workspace-id': activeWorkspace
         }
@@ -585,51 +546,21 @@ const Dashboard = () => {
     }
   };
 
-  const updateStatus = async (newStatus) => {
-    try {
-      const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
-      const res = await axios.put(`${apiBaseUrl}/users/status`, { status: newStatus }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUser(res.data);
-    } catch (err) {
-      console.error('Error updating status:', err);
-    }
-  };
 
-  const updateCustomStatus = async (e) => {
-    e.preventDefault();
-    setIsUpdatingStatus(true);
-    try {
-      const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
-      const res = await axios.put(`${apiBaseUrl}/users/custom-status`, { 
-        text: statusText, 
-        emoji: statusEmoji 
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUser(res.data);
-      setIsStatusModalOpen(false);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error updating status');
-    } finally {
-      setIsUpdatingStatus(false);
-    }
-  };
 
   const createChannel = async (e) => {
     e.preventDefault();
     if (!newChannelName.trim()) return;
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
-      const res = await axios.post(`${apiBaseUrl}/channels`, { 
+      const res = await axios.post(`${apiBaseUrl}/channels`, {
         name: newChannelName,
         description: newChannelDescription,
         workspaceId: activeWorkspace
       }, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'x-workspace-id': activeWorkspace
         }
@@ -647,11 +578,11 @@ const Dashboard = () => {
   const fetchPublicChannels = async () => {
     setIsLoadingPublic(true);
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/channels/public?workspaceId=${activeWorkspace}`, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'x-workspace-id': activeWorkspace
         }
@@ -666,8 +597,8 @@ const Dashboard = () => {
 
   const handleJoinPublicChannel = async (channelId) => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       await axios.post(`${apiBaseUrl}/channels/${channelId}/join`, {}, {
         headers: { Authorization: `Bearer ${token}` }
@@ -688,13 +619,13 @@ const Dashboard = () => {
 
   const confirmLeaveChannel = async () => {
     if (!channelToLeave) return;
-    
+
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       await axios.post(`${apiBaseUrl}/channels/${channelToLeave}/leave`, {}, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'x-workspace-id': activeWorkspace
         }
@@ -736,10 +667,10 @@ const Dashboard = () => {
     e.preventDefault();
     if (!newWorkspaceName.trim()) return;
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
-      const res = await axios.post(`${apiBaseUrl}/workspaces`, { 
+      const res = await axios.post(`${apiBaseUrl}/workspaces`, {
         name: newWorkspaceName,
         slug: newWorkspaceSlug,
         description: newWorkspaceDescription
@@ -760,8 +691,8 @@ const Dashboard = () => {
   const fetchPublicWorkspaces = async () => {
     setIsLoadingPublicWorkspaces(true);
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/workspaces/all`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -776,8 +707,8 @@ const Dashboard = () => {
 
   const handleRequestToJoin = async (workspaceId) => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       await axios.post(`${apiBaseUrl}/workspaces/${workspaceId}/request`, {}, {
         headers: { Authorization: `Bearer ${token}` }
@@ -793,14 +724,14 @@ const Dashboard = () => {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       await axios.post(`${apiBaseUrl}/workspaces/${activeWorkspace}/invite`, {
         email: inviteEmail.includes('@') ? inviteEmail : undefined,
         username: !inviteEmail.includes('@') ? inviteEmail : undefined
       }, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'x-workspace-id': activeWorkspace
         }
@@ -817,11 +748,11 @@ const Dashboard = () => {
   const handleApproveRequest = async (userId) => {
     setIsProcessingApproval(true);
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       await axios.post(`${apiBaseUrl}/workspaces/${activeWorkspace}/approve`, { userId }, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'x-workspace-id': activeWorkspace
         }
@@ -837,11 +768,11 @@ const Dashboard = () => {
   const handleRejectRequest = async (userId) => {
     setIsProcessingApproval(true);
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       await axios.post(`${apiBaseUrl}/workspaces/${activeWorkspace}/reject`, { userId }, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'x-workspace-id': activeWorkspace
         }
@@ -856,8 +787,8 @@ const Dashboard = () => {
 
   const handleAcceptInvite = async (workspaceId) => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       await axios.post(`${apiBaseUrl}/workspaces/invite/accept`, { workspaceId }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -911,8 +842,8 @@ const Dashboard = () => {
 
   const handleViewProfile = async (userId) => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -924,41 +855,7 @@ const Dashboard = () => {
     }
   };
 
-  const handleCompleteProfile = async (e) => {
-    e.preventDefault();
-    console.log('Attempting to complete profile with data:', profileCompletionData);
-    if (!profileCompletionData.fullName.trim() || !profileCompletionData.title.trim()) {
-      console.warn('Profile completion failed: Name and Title are required');
-      setError('Name and Title are required');
-      return;
-    }
-    
-    setIsSavingProfile(true);
-    try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
-        : 'https://zyntry.onrender.com/api';
-      
-      console.log('Calling API:', `${apiBaseUrl}/users/profile`);
-      const res = await axios.put(`${apiBaseUrl}/users/profile`, profileCompletionData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      console.log('Profile update response:', res.data);
-      setIsProfileIncomplete(false);
-      setError(null);
-      // Update local storage user info
-      const updatedUser = { ...user, fullName: profileCompletionData.fullName };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      console.log('Reloading page...');
-      window.location.reload(); // Reload to sync state everywhere
-    } catch (err) {
-      console.error('Error updating profile:', err);
-      setError(err.response?.data?.message || 'Failed to update profile');
-    } finally {
-      setIsSavingProfile(false);
-    }
-  };
+
 
   useEffect(() => {
     if (isJoiningWorkspace) {
@@ -969,15 +866,15 @@ const Dashboard = () => {
   const activeChannelObj = channels.find(c => c._id === selectedChannel);
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      height: '100vh', 
+    <div style={{
+      display: 'flex',
+      height: '100vh',
       minHeight: '100vh',
       height: '100dvh', // Modern dynamic viewport height for mobile
-      backgroundColor: 'var(--bg-dark)', 
-      color: 'var(--text-primary)', 
-      overflow: 'hidden', 
-      position: 'relative' 
+      backgroundColor: 'var(--bg-dark)',
+      color: 'var(--text-primary)',
+      overflow: 'hidden',
+      position: 'relative'
     }}>
       {/* Mobile Overlay */}
       {isSidebarOpen && window.innerWidth <= 768 && (
@@ -986,15 +883,15 @@ const Dashboard = () => {
 
       {/* Error Notification */}
       {error && (
-        <div style={{ 
-          position: 'fixed', 
-          top: '20px', 
-          right: '20px', 
-          backgroundColor: '#ef4444', 
-          color: 'white', 
-          padding: '12px 24px', 
-          borderRadius: '12px', 
-          boxShadow: 'var(--shadow-premium)', 
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          backgroundColor: '#ef4444',
+          color: 'white',
+          padding: '12px 24px',
+          borderRadius: '12px',
+          boxShadow: 'var(--shadow-premium)',
           zIndex: 2000,
           animation: 'fadeIn 0.3s ease-out',
           fontSize: '0.9rem',
@@ -1005,19 +902,19 @@ const Dashboard = () => {
       )}
 
       {/* Workspace Rail (Slack-style far left bar) */}
-      <div style={{ 
-        width: '72px', 
-        backgroundColor: 'var(--bg-dark)', 
+      <div style={{
+        width: '72px',
+        backgroundColor: 'var(--bg-dark)',
         borderRight: '1px solid var(--glass-border)',
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        padding: '16px 0', 
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '16px 0',
         gap: '12px',
         zIndex: 1002
       }}>
         {workspaces.map(ws => (
-          <div 
+          <div
             key={ws._id}
             className={`workspace-icon ${activeWorkspace === ws._id ? 'workspace-icon-active' : ''}`}
             onClick={() => setActiveWorkspace(ws._id)}
@@ -1026,8 +923,8 @@ const Dashboard = () => {
             {ws.name.substring(0, 2).toUpperCase()}
           </div>
         ))}
-        
-        <button 
+
+        <button
           onClick={() => setIsJoiningWorkspace(true)}
           className="workspace-icon"
           style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}
@@ -1036,7 +933,7 @@ const Dashboard = () => {
           <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </button>
 
-        <button 
+        <button
           onClick={() => setIsCreatingWorkspace(true)}
           className="workspace-icon"
           style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--primary-color)' }}
@@ -1048,12 +945,12 @@ const Dashboard = () => {
 
       {/* Sidebar */}
       {activeWorkspace && (
-        <div className={`mobile-sidebar ${isSidebarOpen ? '' : 'sidebar-closed'}`} style={{ 
-          width: isSidebarOpen ? '300px' : '0', 
+        <div className={`mobile-sidebar ${isSidebarOpen ? '' : 'sidebar-closed'}`} style={{
+          width: isSidebarOpen ? '300px' : '0',
           minWidth: isSidebarOpen ? '300px' : '0',
-          backgroundColor: 'var(--bg-card)', 
+          backgroundColor: 'var(--bg-card)',
           borderRight: '1px solid var(--glass-border)',
-          display: 'flex', 
+          display: 'flex',
           flexDirection: 'column',
           transition: 'var(--transition)',
           overflow: 'hidden',
@@ -1075,33 +972,33 @@ const Dashboard = () => {
                     {(() => {
                       const userId = user?.id || user?._id;
                       if (!userId) return false;
-                      
+
                       const isCreator = workspaceDetails.createdBy?.toString() === userId.toString();
-                      const isAdmin = workspaceDetails.members?.some(m => 
-                        (m._id?.toString() === userId.toString() || m.id?.toString() === userId.toString()) && 
+                      const isAdmin = workspaceDetails.members?.some(m =>
+                        (m._id?.toString() === userId.toString() || m.id?.toString() === userId.toString()) &&
                         ['owner', 'admin'].includes(m.role)
                       );
-                      
+
                       return isCreator || isAdmin;
                     })() && (
-                      <>
-                        <button 
-                          onClick={() => setIsWorkspaceSettingsOpen(true)}
-                          style={{ background: 'rgba(255, 255, 255, 0.05)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
-                          title="Workspace Settings"
-                        >
-                          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                        </button>
-                        <button 
-                          onClick={() => setIsInvitingUser(true)}
-                          style={{ background: 'rgba(16, 185, 129, 0.1)', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', padding: '2px 6px', borderRadius: '6px', fontSize: '0.6rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          title="Invite User"
-                        >
-                          <span style={{ fontSize: '0.9rem', lineHeight: '1' }}>+</span>
-                          <span>INVITE</span>
-                        </button>
-                      </>
-                    )}
+                        <>
+                          <button
+                            onClick={() => setIsWorkspaceSettingsOpen(true)}
+                            style={{ background: 'rgba(255, 255, 255, 0.05)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
+                            title="Workspace Settings"
+                          >
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                          </button>
+                          <button
+                            onClick={() => setIsInvitingUser(true)}
+                            style={{ background: 'rgba(16, 185, 129, 0.1)', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', padding: '2px 6px', borderRadius: '6px', fontSize: '0.6rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            title="Invite User"
+                          >
+                            <span style={{ fontSize: '0.9rem', lineHeight: '1' }}>+</span>
+                            <span>INVITE</span>
+                          </button>
+                        </>
+                      )}
                   </div>
                 )}
               </div>
@@ -1114,312 +1011,312 @@ const Dashboard = () => {
           </div>
 
           <div style={{ padding: '16px', flex: 1, overflowY: 'auto' }}>
-          {/* Owner Approval Section */}
-          {workspaceDetails?.createdBy === user?.id && workspaceDetails?.pendingRequests?.length > 0 && (
-            <div style={{ marginBottom: '24px', backgroundColor: 'rgba(16, 185, 129, 0.05)', borderRadius: '12px', padding: '12px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-              <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--primary-color)', fontWeight: '700', marginBottom: '12px' }}>Join Requests</h4>
-              <ul style={{ listStyle: 'none', padding: 0 }}>
-                {workspaceDetails.pendingRequests.map(reqUser => (
-                  <li key={reqUser._id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: '700' }}>{reqUser.username[0].toUpperCase()}</div>
-                      <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>{reqUser.username}</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button 
-                        onClick={() => handleApproveRequest(reqUser._id)}
-                        disabled={isProcessingApproval}
-                        style={{ flex: 1, padding: '6px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
-                      >Approve</button>
-                      <button 
-                        onClick={() => handleRejectRequest(reqUser._id)}
-                        disabled={isProcessingApproval}
-                        style={{ flex: 1, padding: '6px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
-                      >Reject</button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+            {/* Owner Approval Section */}
+            {workspaceDetails?.createdBy === user?.id && workspaceDetails?.pendingRequests?.length > 0 && (
+              <div style={{ marginBottom: '24px', backgroundColor: 'rgba(16, 185, 129, 0.05)', borderRadius: '12px', padding: '12px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--primary-color)', fontWeight: '700', marginBottom: '12px' }}>Join Requests</h4>
+                <ul style={{ listStyle: 'none', padding: 0 }}>
+                  {workspaceDetails.pendingRequests.map(reqUser => (
+                    <li key={reqUser._id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: '700' }}>{reqUser.username[0].toUpperCase()}</div>
+                        <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>{reqUser.username}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => handleApproveRequest(reqUser._id)}
+                          disabled={isProcessingApproval}
+                          style={{ flex: 1, padding: '6px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
+                        >Approve</button>
+                        <button
+                          onClick={() => handleRejectRequest(reqUser._id)}
+                          disabled={isProcessingApproval}
+                          style={{ flex: 1, padding: '6px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
+                        >Reject</button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Channels Section */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '600' }}>Channels</h4>
+                <button
+                  onClick={() => setIsBrowsingChannels(true)}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: '600' }}
+                  title="Browse Channels"
+                >Browse</button>
+              </div>
+              <button
+                onClick={() => setIsCreatingChannel(!isCreatingChannel)}
+                style={{ background: 'rgba(16, 185, 129, 0.1)', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', width: '24px', height: '24px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--transition)' }}
+                title="Create Channel"
+              >+</button>
             </div>
-          )}
 
-          {/* Channels Section */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', marginBottom: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '600' }}>Channels</h4>
-              <button 
-                onClick={() => setIsBrowsingChannels(true)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: '600' }}
-                title="Browse Channels"
-              >Browse</button>
-            </div>
-            <button 
-              onClick={() => setIsCreatingChannel(!isCreatingChannel)}
-              style={{ background: 'rgba(16, 185, 129, 0.1)', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', width: '24px', height: '24px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--transition)' }}
-              title="Create Channel"
-            >+</button>
-          </div>
-          
-          {isCreatingChannel && (
-            <form onSubmit={createChannel} style={{ padding: '0 16px', marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <input 
-                type="text" 
-                placeholder="New channel name..."
-                value={newChannelName}
-                onChange={(e) => setNewChannelName(e.target.value)}
-                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)', backgroundColor: 'var(--bg-dark)', color: 'white', outline: 'none', fontSize: '0.85rem' }}
-                autoFocus
-              />
-              <textarea 
-                placeholder="Description (optional)..."
-                value={newChannelDescription}
-                onChange={(e) => setNewChannelDescription(e.target.value)}
-                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)', backgroundColor: 'var(--bg-dark)', color: 'white', outline: 'none', fontSize: '0.8rem', minHeight: '60px', resize: 'vertical' }}
-              />
-              <button type="submit" style={{ padding: '8px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' }}>Create</button>
-            </form>
-          )}
-          
-          {isLoadingChannels ? (
-            <div style={{ padding: '0 16px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Loading...</div>
-          ) : (
-            <ul style={{ listStyle: 'none', padding: 0, marginBottom: '24px' }}>
-              {channels.filter(ch => !ch.isDirectMessage).length === 0 ? (
-                <li style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic' }}>No channels found</li>
-              ) : (
-                channels.filter(ch => !ch.isDirectMessage).map(ch => (
-                  <li 
-                    key={ch._id} 
-                    onClick={() => joinChannel(ch._id)}
-                    className={`sidebar-item ${selectedChannel === ch._id ? 'sidebar-item-active' : ''}`}
-                    style={{ 
-                      padding: '10px 16px', 
-                      cursor: 'pointer', 
-                      color: selectedChannel === ch._id ? 'var(--primary-color)' : 'var(--text-secondary)',
-                      borderRadius: '8px',
-                      marginBottom: '4px',
-                      transition: 'var(--transition)',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                      <span style={{ marginRight: '12px', opacity: 0.5, fontSize: '1.1rem' }}>#</span>
-                      <span style={{ fontSize: '0.95rem' }}>{ch.name}</span>
-                    </div>
-                    <button 
-                      onClick={(e) => handleLeaveChannel(e, ch._id)}
-                      className="cancel-btn"
-                      style={{ 
-                        background: 'transparent', 
-                        border: 'none', 
-                        color: 'var(--text-secondary)', 
-                        cursor: 'pointer', 
-                        padding: '4px',
-                        display: 'none',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        opacity: 0.6
-                      }}
-                      title="Unpin channel"
-                    >
-                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-          )}
-
-          {/* DMs Section */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', marginBottom: '8px' }}>
-            <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '600' }}>Direct Messages</h4>
-            <button 
-              onClick={() => setIsCreatingDM(!isCreatingDM)}
-              style={{ background: 'rgba(16, 185, 129, 0.1)', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', width: '24px', height: '24px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--transition)' }}
-              title="Start DM"
-            >+</button>
-          </div>
-
-          {isCreatingDM && (
-            <div style={{ padding: '0 16px 16px', marginBottom: '16px', borderBottom: '1px solid var(--glass-border)' }}>
-              <form onSubmit={startDM} style={{ marginBottom: '12px' }}>
-                <input 
-                  type="text" 
-                  placeholder="Search workspace members..."
-                  value={dmSearchQuery}
-                  onChange={(e) => setDmSearchQuery(e.target.value)}
+            {isCreatingChannel && (
+              <form onSubmit={createChannel} style={{ padding: '0 16px', marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <input
+                  type="text"
+                  placeholder="New channel name..."
+                  value={newChannelName}
+                  onChange={(e) => setNewChannelName(e.target.value)}
                   style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)', backgroundColor: 'var(--bg-dark)', color: 'white', outline: 'none', fontSize: '0.85rem' }}
                   autoFocus
                 />
+                <textarea
+                  placeholder="Description (optional)..."
+                  value={newChannelDescription}
+                  onChange={(e) => setNewChannelDescription(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)', backgroundColor: 'var(--bg-dark)', color: 'white', outline: 'none', fontSize: '0.8rem', minHeight: '60px', resize: 'vertical' }}
+                />
+                <button type="submit" style={{ padding: '8px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' }}>Create</button>
               </form>
-              
-              <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {workspaceDetails?.members?.filter(m => 
-                  m._id !== user.id && 
-                  (m.username.toLowerCase().includes(dmSearchQuery.toLowerCase()) || 
-                   m.email.toLowerCase().includes(dmSearchQuery.toLowerCase()))
-                ).map(member => (
-                  <div 
-                    key={member._id}
-                    onClick={async () => {
-                      try {
-                        const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
-                        const res = await axios.post(`${apiBaseUrl}/channels/dm`, { 
-                          userId: member._id,
-                          workspaceId: activeWorkspace 
-                        }, {
-                          headers: { 
-                            Authorization: `Bearer ${token}`,
-                            'x-workspace-id': activeWorkspace
-                          }
-                        });
-                        setDmSearchQuery('');
-                        setIsCreatingDM(false);
-                        await fetchChannels();
-                        joinChannel(res.data._id);
-                      } catch (err) {
-                        setError(err.response?.data?.message || 'Error starting DM');
-                      }
-                    }}
-                    style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'var(--transition)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: '700', color: 'white' }}>
-                      {member.username[0].toUpperCase()}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>{member.username}</span>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{member.email}</span>
-                    </div>
-                  </div>
-                ))}
-                {workspaceDetails?.members?.length === 0 && (
-                  <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>No members found</div>
-                )}
-              </div>
-            </div>
-          )}
+            )}
 
-          {isLoadingChannels ? (
-            <div style={{ padding: '0 16px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Loading...</div>
-          ) : (
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-              {channels.filter(ch => ch.isDirectMessage).length === 0 ? (
-                <li style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic' }}>No DMs yet</li>
-              ) : (
-                channels.filter(ch => ch.isDirectMessage).map(ch => (
-                  <li 
-                    key={ch._id} 
-                    onClick={() => joinChannel(ch._id)}
-                    className={`sidebar-item ${selectedChannel === ch._id ? 'sidebar-item-active' : ''}`}
-                    style={{ 
-                      padding: '10px 16px', 
-                      cursor: 'pointer', 
-                      color: selectedChannel === ch._id ? 'var(--primary-color)' : 'var(--text-secondary)',
-                      borderRadius: '8px',
-                      marginBottom: '4px',
-                      transition: 'var(--transition)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-                      <div style={{ position: 'relative' }}>
-                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--primary-color)', opacity: selectedChannel === ch._id ? 1 : 0.4 }}></div>
-                        {ch.isDirectMessage && (
-                          <div style={{ 
-                            position: 'absolute', 
-                            bottom: '-4px', 
-                            right: '-4px', 
-                            width: '8px', 
-                            height: '8px', 
-                            borderRadius: '50%', 
-                            border: '1.5px solid var(--bg-sidebar)',
-                            backgroundColor: ch.participants?.find(p => p._id !== user.id)?.status === 'online' ? '#10b981' : 'transparent',
-                            boxShadow: ch.participants?.find(p => p._id !== user.id)?.status === 'away' ? 'inset 0 0 0 1.5px var(--text-secondary)' : 'none',
-                            pointerEvents: 'none'
-                          }}></div>
+            {isLoadingChannels ? (
+              <div style={{ padding: '0 16px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Loading...</div>
+            ) : (
+              <ul style={{ listStyle: 'none', padding: 0, marginBottom: '24px' }}>
+                {channels.filter(ch => !ch.isDirectMessage).length === 0 ? (
+                  <li style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic' }}>No channels found</li>
+                ) : (
+                  channels.filter(ch => !ch.isDirectMessage).map(ch => (
+                    <li
+                      key={ch._id}
+                      onClick={() => joinChannel(ch._id)}
+                      className={`sidebar-item ${selectedChannel === ch._id ? 'sidebar-item-active' : ''}`}
+                      style={{
+                        padding: '10px 16px',
+                        cursor: 'pointer',
+                        color: selectedChannel === ch._id ? 'var(--primary-color)' : 'var(--text-secondary)',
+                        borderRadius: '8px',
+                        marginBottom: '4px',
+                        transition: 'var(--transition)',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                        <span style={{ marginRight: '12px', opacity: 0.5, fontSize: '1.1rem' }}>#</span>
+                        <span style={{ fontSize: '0.95rem' }}>{ch.name}</span>
+                      </div>
+                      <button
+                        onClick={(e) => handleLeaveChannel(e, ch._id)}
+                        className="cancel-btn"
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          display: 'none',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          opacity: 0.6
+                        }}
+                        title="Unpin channel"
+                      >
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
+            )}
+
+            {/* DMs Section */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', marginBottom: '8px' }}>
+              <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '600' }}>Direct Messages</h4>
+              <button
+                onClick={() => setIsCreatingDM(!isCreatingDM)}
+                style={{ background: 'rgba(16, 185, 129, 0.1)', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', width: '24px', height: '24px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--transition)' }}
+                title="Start DM"
+              >+</button>
+            </div>
+
+            {isCreatingDM && (
+              <div style={{ padding: '0 16px 16px', marginBottom: '16px', borderBottom: '1px solid var(--glass-border)' }}>
+                <form onSubmit={startDM} style={{ marginBottom: '12px' }}>
+                  <input
+                    type="text"
+                    placeholder="Search workspace members..."
+                    value={dmSearchQuery}
+                    onChange={(e) => setDmSearchQuery(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)', backgroundColor: 'var(--bg-dark)', color: 'white', outline: 'none', fontSize: '0.85rem' }}
+                    autoFocus
+                  />
+                </form>
+
+                <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {workspaceDetails?.members?.filter(m =>
+                    m._id !== user.id &&
+                    (m.username.toLowerCase().includes(dmSearchQuery.toLowerCase()) ||
+                      m.email.toLowerCase().includes(dmSearchQuery.toLowerCase()))
+                  ).map(member => (
+                    <div
+                      key={member._id}
+                      onClick={async () => {
+                        try {
+                          const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
+                          const res = await axios.post(`${apiBaseUrl}/channels/dm`, {
+                            userId: member._id,
+                            workspaceId: activeWorkspace
+                          }, {
+                            headers: {
+                              Authorization: `Bearer ${token}`,
+                              'x-workspace-id': activeWorkspace
+                            }
+                          });
+                          setDmSearchQuery('');
+                          setIsCreatingDM(false);
+                          await fetchChannels();
+                          joinChannel(res.data._id);
+                        } catch (err) {
+                          setError(err.response?.data?.message || 'Error starting DM');
+                        }
+                      }}
+                      style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'var(--transition)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <div style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: '700', color: 'white' }}>
+                        {member.username[0].toUpperCase()}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>{member.username}</span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{member.email}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {workspaceDetails?.members?.length === 0 && (
+                    <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>No members found</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {isLoadingChannels ? (
+              <div style={{ padding: '0 16px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Loading...</div>
+            ) : (
+              <ul style={{ listStyle: 'none', padding: 0 }}>
+                {channels.filter(ch => ch.isDirectMessage).length === 0 ? (
+                  <li style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic' }}>No DMs yet</li>
+                ) : (
+                  channels.filter(ch => ch.isDirectMessage).map(ch => (
+                    <li
+                      key={ch._id}
+                      onClick={() => joinChannel(ch._id)}
+                      className={`sidebar-item ${selectedChannel === ch._id ? 'sidebar-item-active' : ''}`}
+                      style={{
+                        padding: '10px 16px',
+                        cursor: 'pointer',
+                        color: selectedChannel === ch._id ? 'var(--primary-color)' : 'var(--text-secondary)',
+                        borderRadius: '8px',
+                        marginBottom: '4px',
+                        transition: 'var(--transition)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                        <div style={{ position: 'relative' }}>
+                          <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--primary-color)', opacity: selectedChannel === ch._id ? 1 : 0.4 }}></div>
+                          {ch.isDirectMessage && (
+                            <div style={{
+                              position: 'absolute',
+                              bottom: '-4px',
+                              right: '-4px',
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              border: '1.5px solid var(--bg-sidebar)',
+                              backgroundColor: ch.participants?.find(p => p._id !== user.id)?.status === 'online' ? '#10b981' : 'transparent',
+                              boxShadow: ch.participants?.find(p => p._id !== user.id)?.status === 'away' ? 'inset 0 0 0 1.5px var(--text-secondary)' : 'none',
+                              pointerEvents: 'none'
+                            }}></div>
+                          )}
+                        </div>
+                        <span style={{ fontSize: '0.95rem' }}>{getChannelDisplayName(ch)}</span>
+                        {ch.isDirectMessage && ch.participants?.find(p => p._id !== user.id)?.customStatus?.emoji && (
+                          <span title={ch.participants.find(p => p._id !== user.id).customStatus.text} style={{ fontSize: '0.8rem' }}>{ch.participants.find(p => p._id !== user.id).customStatus.emoji}</span>
                         )}
                       </div>
-                      <span style={{ fontSize: '0.95rem' }}>{getChannelDisplayName(ch)}</span>
-                      {ch.isDirectMessage && ch.participants?.find(p => p._id !== user.id)?.customStatus?.emoji && (
-                        <span title={ch.participants.find(p => p._id !== user.id).customStatus.text} style={{ fontSize: '0.8rem' }}>{ch.participants.find(p => p._id !== user.id).customStatus.emoji}</span>
-                      )}
-                    </div>
-                    <button 
-                      onClick={(e) => handleLeaveChannel(e, ch._id)}
-                      className="cancel-btn"
-                      style={{ 
-                        background: 'transparent', 
-                        border: 'none', 
-                        color: 'var(--text-secondary)', 
-                        cursor: 'pointer', 
-                        padding: '4px',
-                        display: 'none',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        opacity: 0.6
-                      }}
-                      title="Unpin chat"
-                    >
-                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-          )}
-        </div>
-
-        <div style={{ padding: '20px', borderTop: '1px solid var(--glass-border)', backgroundColor: 'rgba(0,0,0,0.1)' }}>
-          <div 
-            onClick={() => { setViewedUser(user); setIsViewingProfile(true); }}
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '12px', cursor: 'pointer', transition: 'var(--transition)', border: '1px solid var(--glass-border)', backgroundColor: 'rgba(255,255,255,0.02)', marginBottom: '16px' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'}
-          >
-            <div style={{ position: 'relative' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: 'white', fontSize: '0.9rem', overflow: 'hidden' }}>
-                {user?.profilePicture ? (
-                  <img src={user.profilePicture} alt={user.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  user?.username?.[0]?.toUpperCase()
+                      <button
+                        onClick={(e) => handleLeaveChannel(e, ch._id)}
+                        className="cancel-btn"
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          display: 'none',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          opacity: 0.6
+                        }}
+                        title="Unpin chat"
+                      >
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </li>
+                  ))
                 )}
-              </div>
-              <div style={{ 
-                position: 'absolute', 
-                bottom: '-2px', 
-                right: '-2px', 
-                width: '10px', 
-                height: '10px', 
-                borderRadius: '50%', 
-                border: '2px solid var(--bg-sidebar)',
-                backgroundColor: user?.status === 'online' ? '#10b981' : 'transparent',
-                boxShadow: user?.status === 'away' ? 'inset 0 0 0 2px var(--text-secondary)' : 'none',
-                pointerEvents: 'none'
-              }}></div>
-            </div>
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              <p style={{ fontWeight: '600', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
-                {user?.username} {user?.customStatus?.emoji}
-              </p>
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                Profile
-              </p>
-            </div>
+              </ul>
+            )}
           </div>
-          <button 
-            onClick={onLogout}
-            style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'var(--transition)' }}
-          >
-            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-            Logout
-          </button>
+
+          <div style={{ padding: '20px', borderTop: '1px solid var(--glass-border)', backgroundColor: 'rgba(0,0,0,0.1)' }}>
+            <div
+              onClick={() => { setViewedUser(user); setIsViewingProfile(true); }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '12px', cursor: 'pointer', transition: 'var(--transition)', border: '1px solid var(--glass-border)', backgroundColor: 'rgba(255,255,255,0.02)', marginBottom: '16px' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'}
+            >
+              <div style={{ position: 'relative' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: 'white', fontSize: '0.9rem', overflow: 'hidden' }}>
+                  {user?.profilePicture ? (
+                    <img src={user.profilePicture} alt={user.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    user?.username?.[0]?.toUpperCase()
+                  )}
+                </div>
+                <div style={{
+                  position: 'absolute',
+                  bottom: '-2px',
+                  right: '-2px',
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  border: '2px solid var(--bg-sidebar)',
+                  backgroundColor: user?.status === 'online' ? '#10b981' : 'transparent',
+                  boxShadow: user?.status === 'away' ? 'inset 0 0 0 2px var(--text-secondary)' : 'none',
+                  pointerEvents: 'none'
+                }}></div>
+              </div>
+              <div style={{ flex: 1, overflow: 'hidden' }}>
+                <p style={{ fontWeight: '600', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
+                  {user?.username} {user?.customStatus?.emoji}
+                </p>
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  Profile
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onLogout}
+              style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'var(--transition)' }}
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+              Logout
+            </button>
+          </div>
         </div>
-      </div>
       )}
 
       {/* Main Content */}
@@ -1434,13 +1331,13 @@ const Dashboard = () => {
               <p style={{ maxWidth: '450px', margin: '0 auto 32px', lineHeight: '1.6', fontSize: '1rem', color: 'var(--text-secondary)' }}>
                 You must select a workspace to access your channels, messages, and team members.
               </p>
-              
+
               {workspaces.length > 0 && (
                 <div style={{ marginBottom: '32px', textAlign: 'left' }}>
                   <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Your Workspaces</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
                     {workspaces.map(ws => (
-                      <div 
+                      <div
                         key={ws._id}
                         onClick={() => setActiveWorkspace(ws._id)}
                         style={{ padding: '16px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--glass-border)', cursor: 'pointer', transition: 'var(--transition)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}
@@ -1458,18 +1355,18 @@ const Dashboard = () => {
               )}
 
               <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
-                <button 
+                <button
                   onClick={() => setIsCreatingWorkspace(true)}
                   style={{ padding: '14px 28px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', transition: 'var(--transition)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)' }}
                 >Create Workspace</button>
-                <button 
+                <button
                   onClick={() => setIsJoiningWorkspace(true)}
                   style={{ padding: '14px 28px', backgroundColor: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', transition: 'var(--transition)' }}
                 >Join Workspace</button>
               </div>
 
               <div style={{ marginTop: '40px', paddingTop: '24px', borderTop: '1px solid var(--glass-border)' }}>
-                 <button 
+                <button
                   onClick={onLogout}
                   style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
                 >Logout from Account</button>
@@ -1478,50 +1375,50 @@ const Dashboard = () => {
           </div>
         ) : (
           selectedChannel ? (
-          <>
-            <header style={{ 
-              padding: '16px 24px', 
-              borderBottom: '1px solid var(--glass-border)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '16px',
-              backgroundColor: 'var(--glass-bg)',
-              backdropFilter: 'blur(10px)',
-              zIndex: 10
-            }}>
-              <button 
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-              </button>
-              
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div 
-                  onClick={() => setIsSearching(true)}
-                  style={{ 
-                    width: '100%', 
-                    maxWidth: '400px', 
-                    backgroundColor: 'rgba(255,255,255,0.05)', 
-                    padding: '8px 16px', 
-                    borderRadius: '8px', 
-                    border: '1px solid var(--glass-border)',
-                    color: 'var(--text-secondary)',
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    transition: 'var(--transition)'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+            <>
+              <header style={{
+                padding: '16px 24px',
+                borderBottom: '1px solid var(--glass-border)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                backgroundColor: 'var(--glass-bg)',
+                backdropFilter: 'blur(10px)',
+                zIndex: 10
+              }}>
+                <button
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                  <span>Search {workspaceDetails?.name || 'Workspace'}...</span>
-                  <span style={{ marginLeft: 'auto', fontSize: '0.7rem', opacity: 0.5, border: '1px solid var(--glass-border)', padding: '2px 6px', borderRadius: '4px' }}>Ctrl + G</span>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                </button>
+
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div
+                    onClick={() => setIsSearching(true)}
+                    style={{
+                      width: '100%',
+                      maxWidth: '400px',
+                      backgroundColor: 'rgba(255,255,255,0.05)',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--glass-border)',
+                      color: 'var(--text-secondary)',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      transition: 'var(--transition)'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                  >
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <span>Search {workspaceDetails?.name || 'Workspace'}...</span>
+                    <span style={{ marginLeft: 'auto', fontSize: '0.7rem', opacity: 0.5, border: '1px solid var(--glass-border)', padding: '2px 6px', borderRadius: '4px' }}>Ctrl + G</span>
+                  </div>
                 </div>
-              </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <h2 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-primary)' }}>
@@ -1529,10 +1426,10 @@ const Dashboard = () => {
                   </h2>
                   {activeChannelObj?.isDirectMessage && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div style={{ 
-                        width: '8px', 
-                        height: '8px', 
-                        borderRadius: '50%', 
+                      <div style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
                         backgroundColor: activeChannelObj.participants?.find(p => p._id !== user.id)?.status === 'online' ? '#10b981' : 'transparent',
                         boxShadow: activeChannelObj.participants?.find(p => p._id !== user.id)?.status === 'away' ? 'inset 0 0 0 1.5px var(--text-secondary)' : 'none'
                       }}></div>
@@ -1547,511 +1444,511 @@ const Dashboard = () => {
                     </div>
                   )}
                 </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ position: 'relative' }}>
-                  <button 
-                    onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                    {unreadCount > 0 && (
-                      <span style={{ position: 'absolute', top: '-4px', right: '-4px', backgroundColor: '#ef4444', color: 'white', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '10px', fontWeight: '800', border: '2px solid var(--bg-card)' }}>
-                        {unreadCount}
-                      </span>
-                    )}
-                  </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                      style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                      {unreadCount > 0 && (
+                        <span style={{ position: 'absolute', top: '-4px', right: '-4px', backgroundColor: '#ef4444', color: 'white', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '10px', fontWeight: '800', border: '2px solid var(--bg-card)' }}>
+                          {unreadCount}
+                        </span>
+                      )}
+                    </button>
 
-                  {isNotificationOpen && (
-                    <div style={{ 
-                      position: 'absolute', 
-                      top: '100%', 
-                      right: 0, 
-                      width: '320px', 
-                      backgroundColor: 'var(--bg-card)', 
-                      borderRadius: '16px', 
-                      border: '1px solid var(--glass-border)', 
-                      boxShadow: 'var(--shadow-premium)', 
-                      marginTop: '12px',
-                      zIndex: 3000,
-                      overflow: 'hidden',
-                      animation: 'fadeIn 0.2s ease-out'
-                    }}>
-                      <div style={{ padding: '16px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h4 style={{ fontSize: '0.9rem', fontWeight: '700' }}>Notifications</h4>
-                        <button 
-                          onClick={markAllNotificationsAsRead}
-                          style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
-                        >Mark all as read</button>
-                      </div>
-                      <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                        {notifications.length === 0 ? (
-                          <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No notifications yet</div>
-                        ) : (
-                          notifications.map(n => (
-                            <div 
-                              key={n._id} 
-                              onClick={() => handleNotificationClick(n)}
-                              style={{ 
-                                padding: '16px', 
-                                borderBottom: '1px solid var(--glass-border)', 
-                                cursor: 'pointer', 
-                                backgroundColor: n.isRead ? 'transparent' : 'rgba(16, 185, 129, 0.05)',
-                                transition: 'var(--transition)'
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = n.isRead ? 'transparent' : 'rgba(16, 185, 129, 0.05)'}
-                            >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                <span style={{ fontSize: '0.85rem', fontWeight: '700', color: n.isRead ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{n.title}</span>
-                                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    {isNotificationOpen && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        right: 0,
+                        width: '320px',
+                        backgroundColor: 'var(--bg-card)',
+                        borderRadius: '16px',
+                        border: '1px solid var(--glass-border)',
+                        boxShadow: 'var(--shadow-premium)',
+                        marginTop: '12px',
+                        zIndex: 3000,
+                        overflow: 'hidden',
+                        animation: 'fadeIn 0.2s ease-out'
+                      }}>
+                        <div style={{ padding: '16px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <h4 style={{ fontSize: '0.9rem', fontWeight: '700' }}>Notifications</h4>
+                          <button
+                            onClick={markAllNotificationsAsRead}
+                            style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
+                          >Mark all as read</button>
+                        </div>
+                        <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                          {notifications.length === 0 ? (
+                            <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No notifications yet</div>
+                          ) : (
+                            notifications.map(n => (
+                              <div
+                                key={n._id}
+                                onClick={() => handleNotificationClick(n)}
+                                style={{
+                                  padding: '16px',
+                                  borderBottom: '1px solid var(--glass-border)',
+                                  cursor: 'pointer',
+                                  backgroundColor: n.isRead ? 'transparent' : 'rgba(16, 185, 129, 0.05)',
+                                  transition: 'var(--transition)'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = n.isRead ? 'transparent' : 'rgba(16, 185, 129, 0.05)'}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                  <span style={{ fontSize: '0.85rem', fontWeight: '700', color: n.isRead ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{n.title}</span>
+                                  <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{n.message}</p>
                               </div>
-                              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{n.message}</p>
-                            </div>
-                          ))
-                        )}
+                            ))
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                <div 
-                  onClick={() => setIsInfoSidebarOpen(!isInfoSidebarOpen)}
-                  style={{ background: 'transparent', border: 'none', color: isInfoSidebarOpen ? 'var(--primary-color)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '4px' }}
-                  title="Show Info"
-                >
-                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                </div>
-              </div>
-            </header>
-            
-            <div style={{ 
-              flex: 1, 
-              padding: '24px', 
-              overflowY: 'auto', 
-              display: 'flex', 
-              flexDirection: 'column', 
-              gap: '16px',
-              backgroundColor: 'var(--bg-dark)'
-            }}>
-              {isLoadingMessages ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <div className="spinner" style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--primary-color)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                    Loading messages...
+                  <div
+                    onClick={() => setIsInfoSidebarOpen(!isInfoSidebarOpen)}
+                    style={{ background: 'transparent', border: 'none', color: isInfoSidebarOpen ? 'var(--primary-color)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '4px' }}
+                    title="Show Info"
+                  >
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   </div>
                 </div>
-              ) : messages.length === 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                  <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>✨</div>
-                  <h3 style={{ color: 'var(--text-primary)', marginBottom: '8px', fontSize: '1.1rem' }}>Beginning of history</h3>
-                  <p style={{ fontSize: '0.9rem', opacity: 0.7 }}>Say hello to {activeChannelObj?.isDirectMessage ? '@' : '#'}{getChannelDisplayName(activeChannelObj)}!</p>
-                </div>
-              ) : (
-                messages.map((msg, index) => {
-                  const isOwn = msg.sender?._id === user?.id;
-                  const prevMsg = messages[index - 1];
-                  const showHeader = !prevMsg || prevMsg.sender?._id !== msg.sender?._id;
+              </header>
 
-                  return (
-                    <div key={msg._id} style={{ 
-                      display: 'flex', 
-                      flexDirection: 'row',
-                      alignItems: 'flex-start',
-                      gap: '12px',
-                      marginTop: showHeader ? '16px' : '2px',
-                      paddingLeft: isOwn ? '0' : '0',
-                      paddingRight: isOwn ? '0' : '0',
-                      justifyContent: isOwn ? 'flex-end' : 'flex-start'
-                    }}>
-                      {!isOwn && showHeader && (
-                        <div 
-                          onClick={() => handleViewProfile(msg.sender?._id)}
-                          style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', flexShrink: 0, overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: 'white', fontSize: '0.8rem', transition: 'var(--transition)' }}
-                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        >
-                          {msg.sender?.profilePicture ? (
-                            <img src={msg.sender.profilePicture} alt={msg.sender.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            msg.sender?.username?.[0]?.toUpperCase()
-                          )}
-                        </div>
-                      )}
-                      {!isOwn && !showHeader && <div style={{ width: '36px', flexShrink: 0 }} />}
-                      
-                      <div style={{ 
-                        display: 'flex', 
-                        flexDirection: 'column',
-                        alignItems: isOwn ? 'flex-end' : 'flex-start',
-                        maxWidth: '75%'
+              <div style={{
+                flex: 1,
+                padding: '24px',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                backgroundColor: 'var(--bg-dark)'
+              }}>
+                {isLoadingMessages ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <div className="spinner" style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--primary-color)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                      Loading messages...
+                    </div>
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>✨</div>
+                    <h3 style={{ color: 'var(--text-primary)', marginBottom: '8px', fontSize: '1.1rem' }}>Beginning of history</h3>
+                    <p style={{ fontSize: '0.9rem', opacity: 0.7 }}>Say hello to {activeChannelObj?.isDirectMessage ? '@' : '#'}{getChannelDisplayName(activeChannelObj)}!</p>
+                  </div>
+                ) : (
+                  messages.map((msg, index) => {
+                    const isOwn = msg.sender?._id === user?.id;
+                    const prevMsg = messages[index - 1];
+                    const showHeader = !prevMsg || prevMsg.sender?._id !== msg.sender?._id;
+
+                    return (
+                      <div key={msg._id} style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'flex-start',
+                        gap: '12px',
+                        marginTop: showHeader ? '16px' : '2px',
+                        paddingLeft: isOwn ? '0' : '0',
+                        paddingRight: isOwn ? '0' : '0',
+                        justifyContent: isOwn ? 'flex-end' : 'flex-start'
                       }}>
-                        {showHeader && (
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px', padding: '0 4px' }}>
-                            <span 
-                              onClick={() => !isOwn && handleViewProfile(msg.sender?._id)}
-                              style={{ fontSize: '0.8rem', fontWeight: '700', color: isOwn ? 'var(--primary-color)' : 'var(--text-primary)', cursor: isOwn ? 'default' : 'pointer' }}
-                            >
-                              {isOwn ? 'You' : msg.sender?.username}
-                            </span>
-                            <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', opacity: 0.6 }}>
-                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
+                        {!isOwn && showHeader && (
+                          <div
+                            onClick={() => handleViewProfile(msg.sender?._id)}
+                            style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', flexShrink: 0, overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: 'white', fontSize: '0.8rem', transition: 'var(--transition)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                          >
+                            {msg.sender?.profilePicture ? (
+                              <img src={msg.sender.profilePicture} alt={msg.sender.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              msg.sender?.username?.[0]?.toUpperCase()
+                            )}
                           </div>
                         )}
-                        <div style={{ 
-                          padding: '10px 16px', 
-                          borderRadius: '12px', 
-                          borderTopRightRadius: isOwn && showHeader ? '2px' : '12px',
-                          borderTopLeftRadius: !isOwn && showHeader ? '2px' : '12px',
-                          backgroundColor: isOwn ? 'var(--primary-color)' : 'var(--bg-card)',
-                          color: isOwn ? 'white' : 'var(--text-primary)',
-                          fontSize: '0.95rem',
-                          lineHeight: '1.4',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                          border: isOwn ? 'none' : '1px solid var(--glass-border)'
+                        {!isOwn && !showHeader && <div style={{ width: '36px', flexShrink: 0 }} />}
+
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: isOwn ? 'flex-end' : 'flex-start',
+                          maxWidth: '75%'
                         }}>
-                          {msg.text}
-                        </div>
-                      </div>
-
-                      {isOwn && showHeader && (
-                        <div 
-                          onClick={() => { setViewedUser(user); setIsViewingProfile(true); }}
-                          style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', flexShrink: 0, overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: 'white', fontSize: '0.8rem', transition: 'var(--transition)' }}
-                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        >
-                          {user?.profilePicture ? (
-                            <img src={user.profilePicture} alt={user.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            user?.username?.[0]?.toUpperCase()
+                          {showHeader && (
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px', padding: '0 4px' }}>
+                              <span
+                                onClick={() => !isOwn && handleViewProfile(msg.sender?._id)}
+                                style={{ fontSize: '0.8rem', fontWeight: '700', color: isOwn ? 'var(--primary-color)' : 'var(--text-primary)', cursor: isOwn ? 'default' : 'pointer' }}
+                              >
+                                {isOwn ? 'You' : msg.sender?.username}
+                              </span>
+                              <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', opacity: 0.6 }}>
+                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
                           )}
+                          <div style={{
+                            padding: '10px 16px',
+                            borderRadius: '12px',
+                            borderTopRightRadius: isOwn && showHeader ? '2px' : '12px',
+                            borderTopLeftRadius: !isOwn && showHeader ? '2px' : '12px',
+                            backgroundColor: isOwn ? 'var(--primary-color)' : 'var(--bg-card)',
+                            color: isOwn ? 'white' : 'var(--text-primary)',
+                            fontSize: '0.95rem',
+                            lineHeight: '1.4',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            border: isOwn ? 'none' : '1px solid var(--glass-border)'
+                          }}>
+                            {msg.text}
+                          </div>
                         </div>
-                      )}
-                      {isOwn && !showHeader && <div style={{ width: '36px', flexShrink: 0 }} />}
-                    </div>
-                  );
-                })
-              )}
-              <div ref={messagesEndRef} />
-            </div>
 
-            <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg-dark)' }}>
-              <form onSubmit={sendMessage} style={{ 
-                display: 'flex', 
-                gap: '12px', 
-                background: 'var(--bg-card)', 
-                padding: '8px 12px', 
-                borderRadius: '12px',
-                border: '1px solid var(--glass-border)',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                transition: 'var(--transition)'
-              }}
-              onFocusCapture={(e) => e.currentTarget.style.borderColor = 'var(--primary-color)'}
-              onBlurCapture={(e) => e.currentTarget.style.borderColor = 'var(--glass-border)'}
-              >
-                <div style={{ position: 'relative', flex: 1 }}>
-                  <input 
-                    type="text" 
-                    value={newMessage}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setNewMessage(value);
-                      
-                      // Mention logic
-                      const lastAtPos = value.lastIndexOf('@');
-                      if (lastAtPos !== -1 && (lastAtPos === 0 || value[lastAtPos - 1] === ' ')) {
-                        const query = value.substring(lastAtPos + 1);
-                        if (!query.includes(' ')) {
-                          setMentionQuery(query);
-                          setShowMentions(true);
-                          const filtered = workspaceDetails?.members?.filter(m => 
-                            m.username.toLowerCase().includes(query.toLowerCase())
-                          ) || [];
-                          setMentionSuggestions(filtered);
+                        {isOwn && showHeader && (
+                          <div
+                            onClick={() => { setViewedUser(user); setIsViewingProfile(true); }}
+                            style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', flexShrink: 0, overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: 'white', fontSize: '0.8rem', transition: 'var(--transition)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                          >
+                            {user?.profilePicture ? (
+                              <img src={user.profilePicture} alt={user.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              user?.username?.[0]?.toUpperCase()
+                            )}
+                          </div>
+                        )}
+                        {isOwn && !showHeader && <div style={{ width: '36px', flexShrink: 0 }} />}
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg-dark)' }}>
+                <form onSubmit={sendMessage} style={{
+                  display: 'flex',
+                  gap: '12px',
+                  background: 'var(--bg-card)',
+                  padding: '8px 12px',
+                  borderRadius: '12px',
+                  border: '1px solid var(--glass-border)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                  transition: 'var(--transition)'
+                }}
+                  onFocusCapture={(e) => e.currentTarget.style.borderColor = 'var(--primary-color)'}
+                  onBlurCapture={(e) => e.currentTarget.style.borderColor = 'var(--glass-border)'}
+                >
+                  <div style={{ position: 'relative', flex: 1 }}>
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setNewMessage(value);
+
+                        // Mention logic
+                        const lastAtPos = value.lastIndexOf('@');
+                        if (lastAtPos !== -1 && (lastAtPos === 0 || value[lastAtPos - 1] === ' ')) {
+                          const query = value.substring(lastAtPos + 1);
+                          if (!query.includes(' ')) {
+                            setMentionQuery(query);
+                            setShowMentions(true);
+                            const filtered = workspaceDetails?.members?.filter(m =>
+                              m.username.toLowerCase().includes(query.toLowerCase())
+                            ) || [];
+                            setMentionSuggestions(filtered);
+                          } else {
+                            setShowMentions(false);
+                          }
                         } else {
                           setShowMentions(false);
                         }
-                      } else {
-                        setShowMentions(false);
-                      }
-                    }}
-                    placeholder={`Message ${activeChannelObj?.isDirectMessage ? '@' : '#'}${getChannelDisplayName(activeChannelObj)}`}
-                    style={{ 
-                      width: '100%',
-                      padding: '8px 4px', 
-                      backgroundColor: 'transparent', 
-                      border: 'none', 
-                      color: 'white', 
-                      outline: 'none',
-                      fontSize: '0.95rem'
-                    }}
-                    disabled={isSending}
-                  />
-                  
-                  {showMentions && mentionSuggestions.length > 0 && (
-                    <div style={{ 
-                      position: 'absolute', 
-                      bottom: '100%', 
-                      left: 0, 
-                      width: '240px', 
-                      backgroundColor: 'var(--bg-card)', 
-                      borderRadius: '12px', 
-                      border: '1px solid var(--glass-border)', 
-                      boxShadow: 'var(--shadow-premium)', 
-                      marginBottom: '8px',
-                      overflow: 'hidden',
-                      zIndex: 100
-                    }}>
-                      <div style={{ padding: '8px 12px', fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: '700', borderBottom: '1px solid var(--glass-border)' }}>Members</div>
-                      <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                        {mentionSuggestions.map(member => (
-                          <div 
-                            key={member._id}
-                            onClick={() => {
-                              const lastAtPos = newMessage.lastIndexOf('@');
-                              const before = newMessage.substring(0, lastAtPos);
-                              const after = newMessage.substring(lastAtPos + mentionQuery.length + 1);
-                              setNewMessage(`${before}@${member.username} ${after}`);
-                              setShowMentions(false);
-                            }}
-                            style={{ padding: '10px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'var(--transition)' }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          >
-                            <div style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: '700' }}>
-                              {member.username[0].toUpperCase()}
+                      }}
+                      placeholder={`Message ${activeChannelObj?.isDirectMessage ? '@' : '#'}${getChannelDisplayName(activeChannelObj)}`}
+                      style={{
+                        width: '100%',
+                        padding: '8px 4px',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        color: 'white',
+                        outline: 'none',
+                        fontSize: '0.95rem'
+                      }}
+                      disabled={isSending}
+                    />
+
+                    {showMentions && mentionSuggestions.length > 0 && (
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '100%',
+                        left: 0,
+                        width: '240px',
+                        backgroundColor: 'var(--bg-card)',
+                        borderRadius: '12px',
+                        border: '1px solid var(--glass-border)',
+                        boxShadow: 'var(--shadow-premium)',
+                        marginBottom: '8px',
+                        overflow: 'hidden',
+                        zIndex: 100
+                      }}>
+                        <div style={{ padding: '8px 12px', fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: '700', borderBottom: '1px solid var(--glass-border)' }}>Members</div>
+                        <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                          {mentionSuggestions.map(member => (
+                            <div
+                              key={member._id}
+                              onClick={() => {
+                                const lastAtPos = newMessage.lastIndexOf('@');
+                                const before = newMessage.substring(0, lastAtPos);
+                                const after = newMessage.substring(lastAtPos + mentionQuery.length + 1);
+                                setNewMessage(`${before}@${member.username} ${after}`);
+                                setShowMentions(false);
+                              }}
+                              style={{ padding: '10px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'var(--transition)' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              <div style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: '700' }}>
+                                {member.username[0].toUpperCase()}
+                              </div>
+                              <span style={{ fontSize: '0.85rem' }}>{member.username}</span>
                             </div>
-                            <span style={{ fontSize: '0.85rem' }}>{member.username}</span>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-                <button 
-                  type="submit"
-                  disabled={isSending || !newMessage.trim() || isProfileIncomplete}
-                  style={{ 
-                    padding: '8px 16px', 
-                    backgroundColor: (isSending || !newMessage.trim() || isProfileIncomplete) ? 'rgba(255,255,255,0.05)' : 'var(--primary-color)', 
-                    color: (isSending || !newMessage.trim() || isProfileIncomplete) ? 'var(--text-secondary)' : 'white', 
-                    border: 'none', 
-                    borderRadius: '8px', 
-                    cursor: (isSending || !newMessage.trim() || isProfileIncomplete) ? 'not-allowed' : 'pointer', 
-                    fontWeight: '700',
-                    fontSize: '0.85rem',
-                    transition: 'var(--transition)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
-                  }}
-                >
-                  {isSending ? 'Sending' : 'Send'}
-                </button>
-              </form>
-            </div>
-
-            {/* Info Sidebar (Inside Chat Area) */}
-            {isInfoSidebarOpen && (
-              <div style={{ 
-                width: '320px', 
-                minWidth: '320px', 
-                borderLeft: '1px solid var(--glass-border)', 
-                backgroundColor: 'var(--bg-card)', 
-                display: 'flex', 
-                flexDirection: 'column',
-                animation: 'slideInRight 0.3s ease-out'
-              }}>
-                <div style={{ padding: '20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Details</h3>
-                  <button onClick={() => setIsInfoSidebarOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    )}
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSending || !newMessage.trim()}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: (isSending || !newMessage.trim()) ? 'rgba(255,255,255,0.05)' : 'var(--primary-color)',
+                      color: (isSending || !newMessage.trim()) ? 'var(--text-secondary)' : 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: (isSending || !newMessage.trim()) ? 'not-allowed' : 'pointer',
+                      fontWeight: '700',
+                      fontSize: '0.85rem',
+                      transition: 'var(--transition)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}
+                  >
+                    {isSending ? 'Sending' : 'Send'}
                   </button>
-                </div>
+                </form>
+              </div>
 
-                <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-                  {/* Workspace Info (Always at the top of info sidebar) */}
-                  <div style={{ marginBottom: '32px' }}>
-                    <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Workspace</h4>
-                    <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-                      <div style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--primary-color)', marginBottom: '4px' }}>{workspaceDetails?.name}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>{workspaceDetails?.slug}.zyntry.app</div>
-                      {workspaceDetails?.description && (
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.5', marginBottom: '16px' }}>{workspaceDetails.description}</p>
-                      )}
-                      <div style={{ display: 'grid', gap: '8px' }}>
-                        <div style={{ fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'var(--text-secondary)' }}>Members</span>
-                          <span style={{ fontWeight: '600' }}>{workspaceDetails?.members?.length || 0}</span>
-                        </div>
-                        <div style={{ fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'var(--text-secondary)' }}>Owner</span>
-                          <span style={{ fontWeight: '600' }}>{workspaceDetails?.createdBy === user?.id ? 'You' : workspaceDetails?.members?.find(m => m._id === workspaceDetails?.createdBy)?.username || 'Owner'}</span>
-                        </div>
-                      </div>
-                    </div>
+              {/* Info Sidebar (Inside Chat Area) */}
+              {isInfoSidebarOpen && (
+                <div style={{
+                  width: '320px',
+                  minWidth: '320px',
+                  borderLeft: '1px solid var(--glass-border)',
+                  backgroundColor: 'var(--bg-card)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  animation: 'slideInRight 0.3s ease-out'
+                }}>
+                  <div style={{ padding: '20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Details</h3>
+                    <button onClick={() => setIsInfoSidebarOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
                   </div>
 
-                  {activeChannelObj?.isDirectMessage ? (
-                    /* DM Info */
-                    <div>
-                      <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Conversation Partner</h4>
-                      {(() => {
-                        const otherUser = activeChannelObj.participants.find(p => p._id !== user.id);
-                        if (!otherUser) return null;
-                        return (
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                            <div 
-                              onClick={() => handleViewProfile(otherUser._id)}
-                              style={{ width: '80px', height: '80px', borderRadius: '24px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: '700', color: 'white', marginBottom: '16px', cursor: 'pointer', boxShadow: '0 8px 16px rgba(16, 185, 129, 0.2)' }}
-                            >
-                              {otherUser.profilePicture ? (
-                                <img src={otherUser.profilePicture} style={{ width: '100%', height: '100%', borderRadius: '24px', objectFit: 'cover' }} alt={otherUser.username || 'User'} />
-                              ) : (otherUser.username ? otherUser.username[0].toUpperCase() : '?')}
-                            </div>
-                            <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '4px' }}>{otherUser.fullName || otherUser.username || 'Unknown User'}</h3>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--primary-color)', fontWeight: '600', marginBottom: '12px' }}>{otherUser.title || 'Team Member'}</p>
-                            
-                            <div style={{ width: '100%', textAlign: 'left', backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-                              <div style={{ marginBottom: '12px' }}>
-                                <label style={{ display: 'block', fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '4px' }}>Email</label>
-                                <div style={{ fontSize: '0.85rem' }}>{otherUser.email}</div>
-                              </div>
-                              {otherUser.description && (
-                                <div style={{ marginBottom: '12px' }}>
-                                  <label style={{ display: 'block', fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '4px' }}>Bio</label>
-                                  <div style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>{otherUser.description}</div>
-                                </div>
-                              )}
-                              <button 
-                                onClick={() => handleViewProfile(otherUser._id)}
-                                style={{ width: '100%', padding: '10px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', marginTop: '8px', transition: 'var(--transition)' }}
-                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
-                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-color)'}
-                              >Profile</button>
-                            </div>
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+                    {/* Workspace Info (Always at the top of info sidebar) */}
+                    <div style={{ marginBottom: '32px' }}>
+                      <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Workspace</h4>
+                      <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--primary-color)', marginBottom: '4px' }}>{workspaceDetails?.name}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>{workspaceDetails?.slug}.zyntry.app</div>
+                        {workspaceDetails?.description && (
+                          <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.5', marginBottom: '16px' }}>{workspaceDetails.description}</p>
+                        )}
+                        <div style={{ display: 'grid', gap: '8px' }}>
+                          <div style={{ fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>Members</span>
+                            <span style={{ fontWeight: '600' }}>{workspaceDetails?.members?.length || 0}</span>
                           </div>
-                        );
-                      })()}
-                    </div>
-                  ) : (
-                    /* Channel Info */
-                    <div>
-                      <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Channel Info</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-                          <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '8px' }}># {activeChannelObj?.name}</h3>
-                          {activeChannelObj?.description && (
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.5', marginBottom: '16px' }}>{activeChannelObj.description}</p>
-                          )}
-                          <div style={{ display: 'grid', gap: '8px', paddingTop: '12px', borderTop: '1px solid var(--glass-border)' }}>
-                            <div style={{ fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
-                              <span style={{ color: 'var(--text-secondary)' }}>Created by</span>
-                              <span style={{ fontWeight: '600' }}>{activeChannelObj?.createdBy?.username || 'Unknown'}</span>
-                            </div>
-                            <div style={{ fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
-                              <span style={{ color: 'var(--text-secondary)' }}>Created on</span>
-                              <span style={{ fontWeight: '600' }}>{new Date(activeChannelObj?.createdAt).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '12px' }}>Members ({activeChannelObj?.members?.length || 0})</h4>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {activeChannelObj?.members?.slice(0, 5).map(member => (
-                              <div key={member._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', borderRadius: '8px', transition: 'var(--transition)', cursor: 'pointer' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'} onClick={() => handleViewProfile(member._id)}>
-                              <div style={{ position: 'relative' }}>
-                                <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '700', color: 'white' }}>
-                                  {member.profilePicture ? <img src={member.profilePicture} style={{ width: '100%', height: '100%', borderRadius: '8px', objectFit: 'cover' }} alt={member.username || 'User'} /> : (member.username ? member.username[0].toUpperCase() : '?')}
-                                </div>
-                                  <div style={{ 
-                                    position: 'absolute', 
-                                    bottom: '-2px', 
-                                    right: '-2px', 
-                                    width: '10px', 
-                                    height: '10px', 
-                                    borderRadius: '50%', 
-                                    border: '2px solid var(--bg-card)',
-                                    backgroundColor: member.status === 'online' ? '#10b981' : 'transparent',
-                                    boxShadow: member.status === 'away' ? 'inset 0 0 0 2px var(--text-secondary)' : 'none',
-                                    pointerEvents: 'none'
-                                  }}></div>
-                              </div>
-                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                  <span style={{ fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
-                                    {member.username || 'Unknown'} {member._id === user?.id && '(You)'}
-                                    {(() => {
-                                      const wsRole = workspaceDetails?.members?.find(m => m._id === member._id)?.role;
-                                      if (wsRole && wsRole !== 'member') {
-                                        return (
-                                          <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700', marginLeft: '6px' }}>
-                                            {wsRole}
-                                          </span>
-                                        );
-                                      }
-                                      return null;
-                                    })()}
-                                  </span>
-                                  <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{member.title || 'Member'}</span>
-                                </div>
-                              </div>
-                            ))}
-                            {activeChannelObj?.members?.length > 5 && (
-                              <button style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left', padding: '8px' }}>
-                                Show all {activeChannelObj.members.length} members
-                              </button>
-                            )}
+                          <div style={{ fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>Owner</span>
+                            <span style={{ fontWeight: '600' }}>{workspaceDetails?.createdBy === user?.id ? 'You' : workspaceDetails?.members?.find(m => m._id === workspaceDetails?.createdBy)?.username || 'Owner'}</span>
                           </div>
                         </div>
                       </div>
                     </div>
-                  )}
+
+                    {activeChannelObj?.isDirectMessage ? (
+                      /* DM Info */
+                      <div>
+                        <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Conversation Partner</h4>
+                        {(() => {
+                          const otherUser = activeChannelObj.participants.find(p => p._id !== user.id);
+                          if (!otherUser) return null;
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                              <div
+                                onClick={() => handleViewProfile(otherUser._id)}
+                                style={{ width: '80px', height: '80px', borderRadius: '24px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: '700', color: 'white', marginBottom: '16px', cursor: 'pointer', boxShadow: '0 8px 16px rgba(16, 185, 129, 0.2)' }}
+                              >
+                                {otherUser.profilePicture ? (
+                                  <img src={otherUser.profilePicture} style={{ width: '100%', height: '100%', borderRadius: '24px', objectFit: 'cover' }} alt={otherUser.username || 'User'} />
+                                ) : (otherUser.username ? otherUser.username[0].toUpperCase() : '?')}
+                              </div>
+                              <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '4px' }}>{otherUser.fullName || otherUser.username || 'Unknown User'}</h3>
+                              <p style={{ fontSize: '0.85rem', color: 'var(--primary-color)', fontWeight: '600', marginBottom: '12px' }}>{otherUser.title || 'Team Member'}</p>
+
+                              <div style={{ width: '100%', textAlign: 'left', backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                                <div style={{ marginBottom: '12px' }}>
+                                  <label style={{ display: 'block', fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '4px' }}>Email</label>
+                                  <div style={{ fontSize: '0.85rem' }}>{otherUser.email}</div>
+                                </div>
+                                {otherUser.description && (
+                                  <div style={{ marginBottom: '12px' }}>
+                                    <label style={{ display: 'block', fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '4px' }}>Bio</label>
+                                    <div style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>{otherUser.description}</div>
+                                  </div>
+                                )}
+                                <button
+                                  onClick={() => handleViewProfile(otherUser._id)}
+                                  style={{ width: '100%', padding: '10px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', marginTop: '8px', transition: 'var(--transition)' }}
+                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-color)'}
+                                >Profile</button>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    ) : (
+                      /* Channel Info */
+                      <div>
+                        <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Channel Info</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                          <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '8px' }}># {activeChannelObj?.name}</h3>
+                            {activeChannelObj?.description && (
+                              <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.5', marginBottom: '16px' }}>{activeChannelObj.description}</p>
+                            )}
+                            <div style={{ display: 'grid', gap: '8px', paddingTop: '12px', borderTop: '1px solid var(--glass-border)' }}>
+                              <div style={{ fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: 'var(--text-secondary)' }}>Created by</span>
+                                <span style={{ fontWeight: '600' }}>{activeChannelObj?.createdBy?.username || 'Unknown'}</span>
+                              </div>
+                              <div style={{ fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: 'var(--text-secondary)' }}>Created on</span>
+                                <span style={{ fontWeight: '600' }}>{new Date(activeChannelObj?.createdAt).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '12px' }}>Members ({activeChannelObj?.members?.length || 0})</h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {activeChannelObj?.members?.slice(0, 5).map(member => (
+                                <div key={member._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', borderRadius: '8px', transition: 'var(--transition)', cursor: 'pointer' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'} onClick={() => handleViewProfile(member._id)}>
+                                  <div style={{ position: 'relative' }}>
+                                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '700', color: 'white' }}>
+                                      {member.profilePicture ? <img src={member.profilePicture} style={{ width: '100%', height: '100%', borderRadius: '8px', objectFit: 'cover' }} alt={member.username || 'User'} /> : (member.username ? member.username[0].toUpperCase() : '?')}
+                                    </div>
+                                    <div style={{
+                                      position: 'absolute',
+                                      bottom: '-2px',
+                                      right: '-2px',
+                                      width: '10px',
+                                      height: '10px',
+                                      borderRadius: '50%',
+                                      border: '2px solid var(--bg-card)',
+                                      backgroundColor: member.status === 'online' ? '#10b981' : 'transparent',
+                                      boxShadow: member.status === 'away' ? 'inset 0 0 0 2px var(--text-secondary)' : 'none',
+                                      pointerEvents: 'none'
+                                    }}></div>
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
+                                      {member.username || 'Unknown'} {member._id === user?.id && '(You)'}
+                                      {(() => {
+                                        const wsRole = workspaceDetails?.members?.find(m => m._id === member._id)?.role;
+                                        if (wsRole && wsRole !== 'member') {
+                                          return (
+                                            <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700', marginLeft: '6px' }}>
+                                              {wsRole}
+                                            </span>
+                                          );
+                                        }
+                                        return null;
+                                      })()}
+                                    </span>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{member.title || 'Member'}</span>
+                                  </div>
+                                </div>
+                              ))}
+                              {activeChannelObj?.members?.length > 5 && (
+                                <button style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left', padding: '8px' }}>
+                                  Show all {activeChannelObj.members.length} members
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
+              )}
+            </>
+          ) : (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', textAlign: 'center', padding: '40px', backgroundColor: 'var(--bg-dark)' }}>
+              <div style={{ width: '80px', height: '80px', borderRadius: '24px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+                <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
               </div>
-            )}
-          </>
-        ) : (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', textAlign: 'center', padding: '40px', backgroundColor: 'var(--bg-dark)' }}>
-            <div style={{ width: '80px', height: '80px', borderRadius: '24px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-              <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>Welcome to Zyntry</h2>
+              <p style={{ maxWidth: '400px', lineHeight: '1.6', fontSize: '0.95rem' }}>Select a channel from the sidebar to join the conversation and start messaging in real-time.</p>
+              {window.innerWidth <= 768 && (
+                <button
+                  onClick={() => setIsSidebarOpen(true)}
+                  style={{ marginTop: '24px', padding: '12px 24px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}
+                >
+                  Open Sidebar
+                </button>
+              )}
             </div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>Welcome to Zyntry</h2>
-            <p style={{ maxWidth: '400px', lineHeight: '1.6', fontSize: '0.95rem' }}>Select a channel from the sidebar to join the conversation and start messaging in real-time.</p>
-            {window.innerWidth <= 768 && (
-              <button 
-                onClick={() => setIsSidebarOpen(true)}
-                style={{ marginTop: '24px', padding: '12px 24px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}
-              >
-                Open Sidebar
-              </button>
-            )}
-          </div>
-        )
-      )}
+          )
+        )}
       </div>
 
       {/* Browse Channels Modal */}
       {isBrowsingChannels && (
-        <div style={{ 
-          position: 'fixed', 
-          top: 0, 
-          left: 0, 
-          width: '100vw', 
-          height: '100vh', 
-          backgroundColor: 'rgba(0,0,0,0.8)', 
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.8)',
           backdropFilter: 'blur(8px)',
-          zIndex: 3000, 
-          display: 'flex', 
-          alignItems: 'center', 
+          zIndex: 3000,
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           padding: '20px'
         }}>
-          <div style={{ 
-            width: '100%', 
-            maxWidth: '500px', 
-            backgroundColor: 'var(--bg-card)', 
-            borderRadius: '16px', 
+          <div style={{
+            width: '100%',
+            maxWidth: '500px',
+            backgroundColor: 'var(--bg-card)',
+            borderRadius: '16px',
             border: '1px solid var(--glass-border)',
             boxShadow: 'var(--shadow-premium)',
             overflow: 'hidden',
@@ -2065,7 +1962,7 @@ const Dashboard = () => {
                 <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            
+
             <div style={{ padding: '16px', flex: 1, overflowY: 'auto' }}>
               {isLoadingPublic ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>Loading channels...</div>
@@ -2076,11 +1973,11 @@ const Dashboard = () => {
               ) : (
                 <ul style={{ listStyle: 'none', padding: 0 }}>
                   {publicChannels.map(ch => (
-                    <li key={ch._id} style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      padding: '12px 16px', 
+                    <li key={ch._id} style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '12px 16px',
                       borderRadius: '12px',
                       backgroundColor: 'rgba(255,255,255,0.02)',
                       marginBottom: '8px',
@@ -2089,15 +1986,12 @@ const Dashboard = () => {
                       <div>
                         <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}># {ch.name}</span>
                       </div>
-                      <button 
+                      <button
                         onClick={() => {
-                          if (isProfileIncomplete) {
-                            setError('Please complete your profile to join channels.');
-                            return;
-                          }
+
                           handleJoinPublicChannel(ch._id);
                         }}
-                        style={{ padding: '8px 16px', backgroundColor: isProfileIncomplete ? 'rgba(255,255,255,0.05)' : 'var(--primary-color)', color: isProfileIncomplete ? 'var(--text-secondary)' : 'white', border: 'none', borderRadius: '8px', cursor: isProfileIncomplete ? 'not-allowed' : 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
+                        style={{ padding: '8px 16px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
                       >Join</button>
                     </li>
                   ))}
@@ -2110,25 +2004,25 @@ const Dashboard = () => {
 
       {/* Create Workspace Modal */}
       {isCreatingWorkspace && (
-        <div style={{ 
-          position: 'fixed', 
-          top: 0, 
-          left: 0, 
-          width: '100vw', 
-          height: '100vh', 
-          backgroundColor: 'rgba(0,0,0,0.8)', 
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.8)',
           backdropFilter: 'blur(8px)',
-          zIndex: 4000, 
-          display: 'flex', 
-          alignItems: 'center', 
+          zIndex: 4000,
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           padding: '20px'
         }}>
-          <div style={{ 
-            width: '100%', 
-            maxWidth: '400px', 
-            backgroundColor: 'var(--bg-card)', 
-            borderRadius: '16px', 
+          <div style={{
+            width: '100%',
+            maxWidth: '400px',
+            backgroundColor: 'var(--bg-card)',
+            borderRadius: '16px',
             border: '1px solid var(--glass-border)',
             boxShadow: 'var(--shadow-premium)',
             overflow: 'hidden',
@@ -2144,14 +2038,14 @@ const Dashboard = () => {
             <form onSubmit={createWorkspace} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Workspace Name</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="e.g. Acme Corp"
                   value={newWorkspaceName}
                   onChange={(e) => {
                     const name = e.target.value;
                     setNewWorkspaceName(name);
-                    
+
                     // Auto-suggest slug: only if it hasn't been manually edited to something else
                     // For simplicity, we'll just suggest it if the current slug is empty
                     // or if it matches the slugified version of the previous name
@@ -2167,8 +2061,8 @@ const Dashboard = () => {
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Workspace URL (Slug)</label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     placeholder="acme-corp"
                     value={newWorkspaceSlug}
                     onChange={(e) => setNewWorkspaceSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, ''))}
@@ -2181,7 +2075,7 @@ const Dashboard = () => {
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Description (Optional)</label>
-                <textarea 
+                <textarea
                   placeholder="What is this workspace about?"
                   value={newWorkspaceDescription}
                   onChange={(e) => setNewWorkspaceDescription(e.target.value)}
@@ -2189,7 +2083,7 @@ const Dashboard = () => {
                 />
               </div>
 
-              <button 
+              <button
                 type="submit"
                 style={{ width: '100%', padding: '14px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', transition: 'var(--transition)', marginTop: '8px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)' }}
               >
@@ -2202,25 +2096,25 @@ const Dashboard = () => {
 
       {/* Join Workspace Modal */}
       {isJoiningWorkspace && (
-        <div style={{ 
-          position: 'fixed', 
-          top: 0, 
-          left: 0, 
-          width: '100vw', 
-          height: '100vh', 
-          backgroundColor: 'rgba(0,0,0,0.8)', 
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.8)',
           backdropFilter: 'blur(8px)',
-          zIndex: 4000, 
-          display: 'flex', 
-          alignItems: 'center', 
+          zIndex: 4000,
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           padding: '20px'
         }}>
-          <div style={{ 
-            width: '100%', 
-            maxWidth: '500px', 
-            backgroundColor: 'var(--bg-card)', 
-            borderRadius: '16px', 
+          <div style={{
+            width: '100%',
+            maxWidth: '500px',
+            backgroundColor: 'var(--bg-card)',
+            borderRadius: '16px',
             border: '1px solid var(--glass-border)',
             boxShadow: 'var(--shadow-premium)',
             overflow: 'hidden',
@@ -2234,18 +2128,18 @@ const Dashboard = () => {
                 <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            
+
             <div style={{ padding: '24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
               {userInvites.length > 0 && (
                 <div style={{ marginBottom: '8px' }}>
                   <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--primary-color)', fontWeight: '700', marginBottom: '12px' }}>Your Invitations</h4>
                   <ul style={{ listStyle: 'none', padding: 0 }}>
                     {userInvites.map(inv => (
-                      <li key={inv.workspaceId} style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        padding: '16px', 
+                      <li key={inv.workspaceId} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '16px',
                         borderRadius: '12px',
                         backgroundColor: 'rgba(16, 185, 129, 0.05)',
                         marginBottom: '10px',
@@ -2255,7 +2149,7 @@ const Dashboard = () => {
                           <span style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '1rem' }}>{inv.workspaceName}</span>
                           <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>You've been invited!</p>
                         </div>
-                        <button 
+                        <button
                           onClick={() => handleAcceptInvite(inv.workspaceId)}
                           style={{ padding: '8px 16px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
                         >Accept Invite</button>
@@ -2270,8 +2164,8 @@ const Dashboard = () => {
                 <h4 style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>Find My Workspaces</h4>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Enter your email to find workspaces you belong to.</p>
                 <form onSubmit={findWorkspacesByEmail} style={{ display: 'flex', gap: '8px' }}>
-                  <input 
-                    type="email" 
+                  <input
+                    type="email"
                     placeholder="name@company.com"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
@@ -2292,7 +2186,7 @@ const Dashboard = () => {
                               <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>{ws.name}</span>
                               <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{ws.slug}.zyntry.app</p>
                             </div>
-                            <button 
+                            <button
                               onClick={() => {
                                 if (ws.members.includes(user.id)) {
                                   setActiveWorkspace(ws._id);
@@ -2319,8 +2213,8 @@ const Dashboard = () => {
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Enter the unique workspace slug.</p>
                 <form onSubmit={handleLookupWorkspace} style={{ display: 'flex', gap: '8px' }}>
                   <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="acme-corp"
                       value={lookupSlug}
                       onChange={(e) => setLookupSlug(e.target.value)}
@@ -2339,7 +2233,7 @@ const Dashboard = () => {
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{workspacePreview.memberCount} members</p>
                       </div>
                       {!workspacePreview.isMember ? (
-                        <button 
+                        <button
                           onClick={() => handleRequestToJoin(workspacePreview._id)}
                           style={{ padding: '8px 16px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}
                         >Request Access</button>
@@ -2357,25 +2251,25 @@ const Dashboard = () => {
 
       {/* User Profile Modal */}
       {isViewingProfile && viewedUser && (
-        <div style={{ 
-          position: 'fixed', 
-          top: 0, 
-          left: 0, 
-          width: '100vw', 
-          height: '100vh', 
-          backgroundColor: 'rgba(0,0,0,0.85)', 
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.85)',
           backdropFilter: 'blur(12px)',
-          zIndex: 5000, 
-          display: 'flex', 
-          alignItems: 'center', 
+          zIndex: 5000,
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           padding: '20px'
         }}>
-          <div style={{ 
-            width: '100%', 
-            maxWidth: '480px', 
-            backgroundColor: 'var(--bg-card)', 
-            borderRadius: '28px', 
+          <div style={{
+            width: '100%',
+            maxWidth: '480px',
+            backgroundColor: 'var(--bg-card)',
+            borderRadius: '28px',
             border: '1px solid rgba(255, 255, 255, 0.08)',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
             overflow: 'hidden',
@@ -2384,16 +2278,41 @@ const Dashboard = () => {
             {/* Header Banner */}
             <div style={{ position: 'relative', height: '140px', background: `linear-gradient(135deg, var(--primary-color) 0%, #059669 100%)` }}>
               <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0.2, backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
-              <button 
-                onClick={() => { setIsViewingProfile(false); setViewedUser(null); }}
-                style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(0,0,0,0.3)', border: 'none', color: 'white', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', transition: 'var(--transition)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.5)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.3)'}
-              >
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
+              <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '8px', zIndex: 10 }}>
+                {(viewedUser._id === user?.id || viewedUser.id === user?.id) && (
+                  <>
+                    <button 
+                      onClick={() => navigate('/profile')}
+                      title="Edit Profile"
+                      style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', transition: 'var(--transition)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.3)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
+                    >
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    </button>
+                    <button 
+                      onClick={() => navigate('/profile')}
+                      title="Settings & Status"
+                      style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', transition: 'var(--transition)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.3)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
+                    >
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    </button>
+                  </>
+                )}
+                <button 
+                  onClick={() => { setIsViewingProfile(false); setViewedUser(null); }}
+                  title="Close"
+                  style={{ background: 'rgba(0,0,0,0.3)', border: 'none', color: 'white', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', transition: 'var(--transition)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.5)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.3)'}
+                >
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
             </div>
-            
+
             <div style={{ padding: '0 32px 32px', marginTop: '-60px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px' }}>
                 <div style={{ width: '110px', height: '110px', borderRadius: '32px', backgroundColor: 'var(--primary-color)', border: '6px solid var(--bg-card)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.3)', position: 'relative' }}>
@@ -2403,359 +2322,91 @@ const Dashboard = () => {
                     <span style={{ fontSize: '2.8rem', fontWeight: '800', color: 'white' }}>{viewedUser.username?.[0]?.toUpperCase()}</span>
                   )}
                 </div>
-                {viewedUser._id === user?.id && (
-                  <button 
-                    onClick={() => { setIsViewingProfile(false); setHasSkippedCompletion(false); }}
-                    style={{ padding: '10px 20px', backgroundColor: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', transition: 'var(--transition)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
-                  >Edit Profile</button>
-                )}
+
               </div>
-              
+
               <div style={{ marginBottom: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                   <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{viewedUser.fullName || viewedUser.username}</h2>
                   {viewedUser.customStatus?.emoji && <span style={{ fontSize: '1.5rem' }}>{viewedUser.customStatus.emoji}</span>}
                 </div>
                 {viewedUser.title && <p style={{ fontSize: '1rem', color: 'var(--primary-color)', fontWeight: '700', marginBottom: '12px' }}>{viewedUser.title}</p>}
-                
+
                 {viewedUser.customStatus?.text && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', backgroundColor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '10px', width: 'fit-content', marginBottom: '16px' }}>
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: '600' }}>{viewedUser.customStatus.text}</span>
                   </div>
                 )}
-                
+
                 <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
                   {viewedUser.description || (viewedUser._id === user?.id ? "Add a bio to tell people more about yourself." : "No bio provided.")}
                 </p>
               </div>
 
-              {/* Status Section for Current User */}
-              {viewedUser._id === user?.id && (
-                <div style={{ padding: '24px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '24px' }}>
-                  <h3 style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>Status</h3>
-                  <div style={{ display: 'grid', gap: '16px' }}>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <input 
-                        type="text" 
-                        value={statusEmoji}
-                        onChange={(e) => setStatusEmoji(e.target.value)}
-                        placeholder="Emoji"
-                        style={{ width: '60px', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(0,0,0,0.2)', color: 'white', textAlign: 'center', fontSize: '1.2rem' }}
-                      />
-                      <input 
-                        type="text" 
-                        value={statusText}
-                        onChange={(e) => setStatusText(e.target.value)}
-                        placeholder="What's your status?"
-                        style={{ flex: 1, padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(0,0,0,0.2)', color: 'white', outline: 'none', fontSize: '0.9rem' }}
-                      />
-                      <button 
-                        onClick={updateCustomStatus}
-                        disabled={isUpdatingStatus}
-                        style={{ padding: '0 20px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem' }}
-                      >
-                        {isUpdatingStatus ? '...' : 'Save'}
-                      </button>
-                    </div>
-                    <button 
-                      onClick={() => updateStatus(user?.status === 'online' ? 'away' : 'online')}
-                      style={{ width: '100%', padding: '12px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', transition: 'var(--transition)' }}
-                    >
-                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: user?.status === 'online' ? '#10b981' : 'transparent', boxShadow: user?.status === 'away' ? 'inset 0 0 0 2px var(--text-secondary)' : 'none' }}></div>
-                      Set as {user?.status === 'online' ? 'Away' : 'Online'}
-                    </button>
-                  </div>
-                </div>
-              )}
+
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Username</span>
+                  <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Username</span>
                   <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '0.9rem' }}>@{viewedUser.username}</span>
                 </div>
                 <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Email</span>
+                  <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</span>
                   <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{viewedUser.email}</span>
                 </div>
-                {viewedUser.location && (
-                  <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Location</span>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '0.9rem' }}>{viewedUser.location}</span>
-                  </div>
-                )}
-                {viewedUser.website && (
-                  <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Website</span>
-                    <a href={viewedUser.website} target="_blank" rel="noreferrer" style={{ color: 'var(--primary-color)', fontWeight: '700', fontSize: '0.9rem', textDecoration: 'none' }}>Visit</a>
-                  </div>
-                )}
+                <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Location</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '0.9rem' }}>{viewedUser.location || 'Not set'}</span>
+                </div>
+                <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timezone</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '0.9rem' }}>{viewedUser.timezone || 'Not set'}</span>
+                </div>
+                <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Company</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '0.9rem' }}>{viewedUser.company || 'Not set'}</span>
+                </div>
+                <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Phone</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '0.9rem' }}>{viewedUser.contact?.phone || 'Not set'}</span>
+                </div>
+                <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)', gridColumn: 'span 2' }}>
+                  <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Website</span>
+                  {viewedUser.website || viewedUser.contact?.website ? (
+                    <a href={viewedUser.website || viewedUser.contact?.website} target="_blank" rel="noreferrer" style={{ color: 'var(--primary-color)', fontWeight: '700', fontSize: '0.9rem', textDecoration: 'none' }}>{viewedUser.website || viewedUser.contact?.website}</a>
+                  ) : (
+                    <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '0.9rem' }}>Not set</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Force Profile Completion Modal */}
-      {isProfileIncomplete && !hasSkippedCompletion && (
-        <div style={{ 
-          position: 'fixed', 
-          top: 0, 
-          left: 0, 
-          width: '100vw', 
-          height: '100vh', 
-          backgroundColor: 'rgba(10, 11, 14, 0.85)', 
-          backdropFilter: 'blur(12px)',
-          zIndex: 9999, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          padding: '20px'
-        }}>
-          <div style={{ 
-            width: '90%', 
-            maxWidth: '500px', 
-            backgroundColor: 'var(--bg-card)', 
-            borderRadius: '32px', 
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-            padding: '48px',
-            position: 'relative',
-            overflow: 'hidden',
-            boxSizing: 'border-box'
-          }}>
-            {/* Background Accent */}
-            <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%)', zIndex: 0 }}></div>
-            
-            <div style={{ position: 'relative', zIndex: 1 }}>
-              <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                <div style={{ 
-                  width: '72px', 
-                  height: '72px', 
-                  borderRadius: '24px', 
-                  background: 'linear-gradient(135deg, var(--primary-color) 0%, #059669 100%)', 
-                  color: 'white', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  margin: '0 auto 24px',
-                  boxShadow: '0 10px 20px rgba(16, 185, 129, 0.2)'
-                }}>
-                  <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                </div>
-                <h2 style={{ fontSize: '1.85rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '12px', letterSpacing: '-0.02em' }}>Complete Your Profile</h2>
-                <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.6', maxWidth: '320px', margin: '0 auto' }}>Set up your professional identity to start collaborating with your team.</p>
-                
-                {error && (
-                  <div style={{ 
-                    marginTop: '24px', 
-                    padding: '12px 16px', 
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)', 
-                    color: '#ef4444', 
-                    borderRadius: '12px', 
-                    fontSize: '0.85rem', 
-                    border: '1px solid rgba(239, 68, 68, 0.2)',
-                    fontWeight: '600'
-                  }}>
-                    {error}
-                  </div>
-                )}
-              </div>
 
-              <form onSubmit={handleCompleteProfile} style={{ display: 'grid', gap: '24px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700', color: 'rgba(255,255,255,0.6)', marginLeft: '4px' }}>Full Name *</label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="e.g. Jane Cooper"
-                    value={profileCompletionData.fullName}
-                    onChange={(e) => setProfileCompletionData({...profileCompletionData, fullName: e.target.value})}
-                    style={{ 
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      padding: '14px 18px', 
-                      backgroundColor: 'rgba(255,255,255,0.03)', 
-                      border: '1px solid rgba(255,255,255,0.1)', 
-                      borderRadius: '16px', 
-                      color: 'white', 
-                      outline: 'none',
-                      fontSize: '1rem',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = 'var(--primary-color)';
-                      e.target.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = 'rgba(255,255,255,0.1)';
-                      e.target.style.backgroundColor = 'rgba(255,255,255,0.03)';
-                    }}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700', color: 'rgba(255,255,255,0.6)', marginLeft: '4px' }}>Professional Title *</label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="e.g. Product Designer"
-                    value={profileCompletionData.title}
-                    onChange={(e) => setProfileCompletionData({...profileCompletionData, title: e.target.value})}
-                    style={{ 
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      padding: '14px 18px', 
-                      backgroundColor: 'rgba(255,255,255,0.03)', 
-                      border: '1px solid rgba(255,255,255,0.1)', 
-                      borderRadius: '16px', 
-                      color: 'white', 
-                      outline: 'none',
-                      fontSize: '1rem',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = 'var(--primary-color)';
-                      e.target.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = 'rgba(255,255,255,0.1)';
-                      e.target.style.backgroundColor = 'rgba(255,255,255,0.03)';
-                    }}
-                  />
-                </div>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: '700', color: 'rgba(255,255,255,0.6)', marginLeft: '4px' }}>Phone</label>
-                    <input 
-                      type="text" 
-                      placeholder="+1 (555) 000-0000"
-                      value={profileCompletionData.phone}
-                      onChange={(e) => setProfileCompletionData({...profileCompletionData, phone: e.target.value})}
-                      style={{ 
-                        width: '100%',
-                        boxSizing: 'border-box',
-                        padding: '14px 18px', 
-                        backgroundColor: 'rgba(255,255,255,0.03)', 
-                        border: '1px solid rgba(255,255,255,0.1)', 
-                        borderRadius: '16px', 
-                        color: 'white', 
-                        outline: 'none',
-                        fontSize: '0.95rem',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onFocus={(e) => e.target.style.borderColor = 'var(--primary-color)'}
-                      onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: '700', color: 'rgba(255,255,255,0.6)', marginLeft: '4px' }}>Website</label>
-                    <input 
-                      type="text" 
-                      placeholder="https://..."
-                      value={profileCompletionData.website}
-                      onChange={(e) => setProfileCompletionData({...profileCompletionData, website: e.target.value})}
-                      style={{ 
-                        width: '100%',
-                        boxSizing: 'border-box',
-                        padding: '14px 18px', 
-                        backgroundColor: 'rgba(255,255,255,0.03)', 
-                        border: '1px solid rgba(255,255,255,0.1)', 
-                        borderRadius: '16px', 
-                        color: 'white', 
-                        outline: 'none',
-                        fontSize: '0.95rem',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onFocus={(e) => e.target.style.borderColor = 'var(--primary-color)'}
-                      onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                  <button 
-                    type="button"
-                    onClick={() => setHasSkippedCompletion(true)}
-                    style={{ 
-                      flex: 1, 
-                      padding: '16px', 
-                      backgroundColor: 'transparent', 
-                      color: 'rgba(255,255,255,0.6)', 
-                      border: '1px solid rgba(255,255,255,0.1)', 
-                      borderRadius: '18px', 
-                      fontWeight: '700', 
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      fontSize: '0.95rem'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                      e.target.style.color = 'white';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = 'transparent';
-                      e.target.style.color = 'rgba(255,255,255,0.6)';
-                    }}
-                  >
-                    Skip for now
-                  </button>
-                  <button 
-                    type="submit"
-                    disabled={isSavingProfile}
-                    style={{ 
-                      flex: 1.5, 
-                      padding: '16px', 
-                      background: 'linear-gradient(135deg, var(--primary-color) 0%, #059669 100%)', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '18px', 
-                      fontWeight: '800', 
-                      cursor: 'pointer', 
-                      transition: 'all 0.3s ease',
-                      fontSize: '1rem',
-                      boxShadow: '0 10px 20px rgba(16, 185, 129, 0.2)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'translateY(-2px)';
-                      e.target.style.boxShadow = '0 12px 24px rgba(16, 185, 129, 0.3)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = '0 10px 20px rgba(16, 185, 129, 0.2)';
-                    }}
-                  >
-                    {isSavingProfile ? 'Saving...' : 'Continue'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Invite User Modal */}
       {isInvitingUser && (
-        <div style={{ 
-          position: 'fixed', 
-          top: 0, 
-          left: 0, 
-          width: '100vw', 
-          height: '100vh', 
-          backgroundColor: 'rgba(0,0,0,0.8)', 
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.8)',
           backdropFilter: 'blur(8px)',
-          zIndex: 4000, 
-          display: 'flex', 
-          alignItems: 'center', 
+          zIndex: 4000,
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           padding: '20px'
         }}>
-          <div style={{ 
-            width: '100%', 
-            maxWidth: '400px', 
-            backgroundColor: 'var(--bg-card)', 
-            borderRadius: '16px', 
+          <div style={{
+            width: '100%',
+            maxWidth: '400px',
+            backgroundColor: 'var(--bg-card)',
+            borderRadius: '16px',
             border: '1px solid var(--glass-border)',
             boxShadow: 'var(--shadow-premium)',
             overflow: 'hidden',
@@ -2770,15 +2421,15 @@ const Dashboard = () => {
             </div>
             <form onSubmit={handleInviteUser} style={{ padding: '24px' }}>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>Enter the email or username of the person you'd like to invite.</p>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Email or username"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--glass-border)', backgroundColor: 'var(--bg-dark)', color: 'white', outline: 'none', fontSize: '0.9rem', marginBottom: '20px' }}
                 autoFocus
               />
-              <button 
+              <button
                 type="submit"
                 style={{ width: '100%', padding: '12px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', transition: 'var(--transition)' }}
               >
@@ -2797,8 +2448,8 @@ const Dashboard = () => {
             <div className="confirm-modal-header" style={{ padding: '16px 24px' }}>
               <div style={{ width: '100%', position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ position: 'absolute', left: '16px', color: 'var(--primary-color)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="Search channels, people, or messages..."
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
@@ -2807,7 +2458,7 @@ const Dashboard = () => {
                 />
               </div>
             </div>
-            
+
             <div className="confirm-modal-body" style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px' }}>
               {!searchQuery ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
@@ -2821,8 +2472,8 @@ const Dashboard = () => {
                       <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '12px' }}>Channels</h4>
                       <ul style={{ listStyle: 'none', padding: 0 }}>
                         {searchResults.channels.map(ch => (
-                          <li 
-                            key={ch._id} 
+                          <li
+                            key={ch._id}
                             onClick={() => { joinChannel(ch._id); setIsSearching(false); }}
                             style={{ padding: '12px 16px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.02)', marginBottom: '4px', cursor: 'pointer', transition: 'var(--transition)', display: 'flex', alignItems: 'center', gap: '12px' }}
                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.1)'}
@@ -2842,20 +2493,20 @@ const Dashboard = () => {
                       <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '12px' }}>People</h4>
                       <ul style={{ listStyle: 'none', padding: 0 }}>
                         {searchResults.users.map(u => (
-                          <li 
-                            key={u._id} 
+                          <li
+                            key={u._id}
                             onClick={async () => {
                               // Logic to start DM with this user
                               try {
                                 const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
-                                const res = await axios.post(`${apiBaseUrl}/channels/dm`, { 
-                                  email: u.email, 
-                                  workspaceId: activeWorkspace 
-                                }, { 
-                                  headers: { 
+                                const res = await axios.post(`${apiBaseUrl}/channels/dm`, {
+                                  email: u.email,
+                                  workspaceId: activeWorkspace
+                                }, {
+                                  headers: {
                                     Authorization: `Bearer ${token}`,
                                     'x-workspace-id': activeWorkspace
-                                  } 
+                                  }
                                 });
                                 await fetchChannels();
                                 joinChannel(res.data._id);
@@ -2894,15 +2545,15 @@ const Dashboard = () => {
         <div className="modal-backdrop" onClick={() => setIsConfirmingLeave(false)}>
           <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
             <div className="confirm-modal-header">
-              <div style={{ 
-                width: '40px', 
-                height: '40px', 
-                borderRadius: '12px', 
-                backgroundColor: 'rgba(239, 68, 68, 0.1)', 
-                color: '#ef4444', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center' 
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                color: '#ef4444',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}>
                 <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
               </div>
@@ -2950,14 +2601,14 @@ const Dashboard = () => {
                 <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            
+
             <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
               <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Manage Members</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {workspaceDetails?.members?.map(member => {
                   const isOwner = workspaceDetails.createdBy === user?.id;
                   const isSelf = member._id === user?.id;
-                  
+
                   return (
                     <div key={member._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -2974,11 +2625,11 @@ const Dashboard = () => {
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{member.email}</span>
                         </div>
                       </div>
-                      
+
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         {isOwner && !isSelf && (
-                          <select 
-                            value={member.role || 'member'} 
+                          <select
+                            value={member.role || 'member'}
                             onChange={(e) => handleUpdateRole(member._id, e.target.value)}
                             style={{ padding: '6px 12px', backgroundColor: 'var(--bg-dark)', color: 'white', border: '1px solid var(--glass-border)', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', outline: 'none' }}
                           >
@@ -2989,7 +2640,7 @@ const Dashboard = () => {
                           </select>
                         )}
                         {isOwner && !isSelf && (
-                          <button 
+                          <button
                             onClick={() => handleRemoveMember(member._id)}
                             style={{ padding: '6px 12px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
                           >Remove</button>
@@ -3004,7 +2655,7 @@ const Dashboard = () => {
                 <div style={{ marginTop: '40px', paddingTop: '24px', borderTop: '1px solid var(--glass-border)' }}>
                   <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: '#ef4444', fontWeight: '700', marginBottom: '12px' }}>Danger Zone</h4>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>Permanently delete this workspace and all its channels, messages, and files.</p>
-                  <button 
+                  <button
                     onClick={handleDeleteWorkspace}
                     style={{ padding: '10px 16px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', width: '100%' }}
                   >Delete Workspace</button>
