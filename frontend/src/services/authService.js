@@ -37,3 +37,9 @@ export const setToken = (token) => {
 export const removeToken = () => {
   localStorage.removeItem('token');
 };
+
+export function logout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.location.href = '/login';
+}

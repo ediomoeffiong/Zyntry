@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom';
+import { getToken } from '../services/authService';
 
 const Home = () => {
   const navigate = useNavigate();
+  const isAuthenticated = !!getToken();
 
   const primaryButtonStyle = {
     padding: '12px 24px',
@@ -66,33 +68,44 @@ const Home = () => {
           fontFamily: "'Outfit', sans-serif"
         }}>Zyntry</h1>
         <div style={{ display: 'flex', gap: '16px' }}>
-          <button 
-            onClick={() => navigate('/login')}
-            style={{ 
-              background: 'transparent', 
-              border: 'none', 
-              color: 'var(--text-primary)', 
-              fontWeight: '600',
-              cursor: 'pointer',
-              fontSize: '0.95rem'
-            }}
-          >Login</button>
-          <button 
-            onClick={() => navigate('/register')}
-            style={{ 
-              padding: '10px 20px', 
-              backgroundColor: 'var(--primary-color)', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '10px', 
-              fontWeight: '700', 
-              cursor: 'pointer',
-              fontSize: '0.95rem',
-              transition: 'var(--transition)'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-hover)'}
-            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-color)'}
-          >Get Started</button>
+          {isAuthenticated ? (
+            <button 
+              onClick={() => navigate('/dashboard')}
+              style={primaryButtonStyle}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-hover)'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-color)'}
+            >Dashboard</button>
+          ) : (
+            <>
+              <button 
+                onClick={() => navigate('/login')}
+                style={{ 
+                  background: 'transparent', 
+                  border: 'none', 
+                  color: 'var(--text-primary)', 
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontSize: '0.95rem'
+                }}
+              >Login</button>
+              <button 
+                onClick={() => navigate('/register')}
+                style={{ 
+                  padding: '10px 20px', 
+                  backgroundColor: 'var(--primary-color)', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '10px', 
+                  fontWeight: '700', 
+                  cursor: 'pointer',
+                  fontSize: '0.95rem',
+                  transition: 'var(--transition)'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-hover)'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-color)'}
+              >Get Started</button>
+            </>
+          )}
         </div>
       </nav>
 
@@ -120,24 +133,41 @@ const Home = () => {
             margin: '0 auto 48px'
           }}>Zyntry brings your team together with powerful workspaces, channels, and instant messaging. Scale your productivity without the noise.</p>
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
-            <button 
-              onClick={() => navigate('/register')}
-              style={primaryButtonStyle}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--primary-hover)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--primary-color)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >Get Started for Free</button>
-            <button 
-              onClick={() => navigate('/login')}
-              style={secondaryButtonStyle}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
-            >Login</button>
+            {isAuthenticated ? (
+              <button 
+                onClick={() => navigate('/dashboard')}
+                style={primaryButtonStyle}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--primary-hover)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--primary-color)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >Go to Dashboard</button>
+            ) : (
+              <>
+                <button 
+                  onClick={() => navigate('/register')}
+                  style={primaryButtonStyle}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--primary-hover)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--primary-color)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >Get Started for Free</button>
+                <button 
+                  onClick={() => navigate('/login')}
+                  style={secondaryButtonStyle}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
+                >Login</button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -245,14 +275,23 @@ const Home = () => {
           fontFamily: "'Outfit', sans-serif"
         }}>Zyntry</h2>
         <div style={{ display: 'flex', gap: '24px', justifyContent: 'center', marginBottom: '32px' }}>
-          <button 
-            onClick={() => navigate('/login')}
-            style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-          >Login</button>
-          <button 
-            onClick={() => navigate('/register')}
-            style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-          >Sign Up</button>
+          {isAuthenticated ? (
+            <button 
+              onClick={() => navigate('/dashboard')}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+            >Dashboard</button>
+          ) : (
+            <>
+              <button 
+                onClick={() => navigate('/login')}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+              >Login</button>
+              <button 
+                onClick={() => navigate('/register')}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+              >Sign Up</button>
+            </>
+          )}
         </div>
         <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.85rem' }}>&copy; {new Date().getFullYear()} Zyntry. All rights reserved.</p>
       </footer>
