@@ -66,10 +66,16 @@ const Dashboard = () => {
   const [mentionSuggestions, setMentionSuggestions] = useState([]);
   const [mentionQuery, setMentionQuery] = useState('');
   const [showMentions, setShowMentions] = useState(false);
-  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
-  const [statusText, setStatusText] = useState(user?.customStatus?.text || '');
-  const [statusEmoji, setStatusEmoji] = useState(user?.customStatus?.emoji || '');
+  const [statusText, setStatusText] = useState('');
+  const [statusEmoji, setStatusEmoji] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  useEffect(() => {
+    if (user?.customStatus) {
+      setStatusText(user.customStatus.text || '');
+      setStatusEmoji(user.customStatus.emoji || '');
+    }
+  }, [user]);
   const [isWorkspaceSettingsOpen, setIsWorkspaceSettingsOpen] = useState(false);
 
   // Notifications State
@@ -1370,7 +1376,7 @@ const Dashboard = () => {
 
         <div style={{ padding: '20px', borderTop: '1px solid var(--glass-border)', backgroundColor: 'rgba(0,0,0,0.1)' }}>
           <div 
-            onClick={() => setIsStatusModalOpen(true)}
+            onClick={() => { setViewedUser(user); setIsViewingProfile(true); }}
             style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '12px', cursor: 'pointer', transition: 'var(--transition)', border: '1px solid var(--glass-border)', backgroundColor: 'rgba(255,255,255,0.02)', marginBottom: '16px' }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'}
@@ -1401,7 +1407,7 @@ const Dashboard = () => {
                 {user?.username} {user?.customStatus?.emoji}
               </p>
               <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.customStatus?.text || 'Update status'}
+                Profile
               </p>
             </div>
           </div>
@@ -1660,7 +1666,9 @@ const Dashboard = () => {
                       {!isOwn && showHeader && (
                         <div 
                           onClick={() => handleViewProfile(msg.sender?._id)}
-                          style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', flexShrink: 0, overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: 'white', fontSize: '0.8rem' }}
+                          style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', flexShrink: 0, overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: 'white', fontSize: '0.8rem', transition: 'var(--transition)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         >
                           {msg.sender?.profilePicture ? (
                             <img src={msg.sender.profilePicture} alt={msg.sender.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1708,8 +1716,10 @@ const Dashboard = () => {
 
                       {isOwn && showHeader && (
                         <div 
-                          onClick={() => navigate('/profile')}
-                          style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', flexShrink: 0, overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: 'white', fontSize: '0.8rem' }}
+                          onClick={() => { setViewedUser(user); setIsViewingProfile(true); }}
+                          style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', flexShrink: 0, overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: 'white', fontSize: '0.8rem', transition: 'var(--transition)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         >
                           {user?.profilePicture ? (
                             <img src={user.profilePicture} alt={user.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1915,8 +1925,10 @@ const Dashboard = () => {
                               )}
                               <button 
                                 onClick={() => handleViewProfile(otherUser._id)}
-                                style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer', marginTop: '4px' }}
-                              >View Full Profile</button>
+                                style={{ width: '100%', padding: '10px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', marginTop: '8px', transition: 'var(--transition)' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-color)'}
+                              >Profile</button>
                             </div>
                           </div>
                         );
@@ -2343,7 +2355,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* View User Profile Modal */}
+      {/* User Profile Modal */}
       {isViewingProfile && viewedUser && (
         <div style={{ 
           position: 'fixed', 
@@ -2351,8 +2363,8 @@ const Dashboard = () => {
           left: 0, 
           width: '100vw', 
           height: '100vh', 
-          backgroundColor: 'rgba(0,0,0,0.8)', 
-          backdropFilter: 'blur(8px)',
+          backgroundColor: 'rgba(0,0,0,0.85)', 
+          backdropFilter: 'blur(12px)',
           zIndex: 5000, 
           display: 'flex', 
           alignItems: 'center', 
@@ -2361,55 +2373,122 @@ const Dashboard = () => {
         }}>
           <div style={{ 
             width: '100%', 
-            maxWidth: '450px', 
+            maxWidth: '480px', 
             backgroundColor: 'var(--bg-card)', 
-            borderRadius: '24px', 
-            border: '1px solid var(--glass-border)',
-            boxShadow: 'var(--shadow-premium)',
-            overflow: 'hidden'
+            borderRadius: '28px', 
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            overflow: 'hidden',
+            position: 'relative'
           }}>
-            <div style={{ position: 'relative', height: '120px', backgroundColor: 'var(--primary-color)', opacity: 0.8 }}>
+            {/* Header Banner */}
+            <div style={{ position: 'relative', height: '140px', background: `linear-gradient(135deg, var(--primary-color) 0%, #059669 100%)` }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0.2, backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
               <button 
                 onClick={() => { setIsViewingProfile(false); setViewedUser(null); }}
-                style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(0,0,0,0.3)', border: 'none', color: 'white', cursor: 'pointer', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(0,0,0,0.3)', border: 'none', color: 'white', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', transition: 'var(--transition)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.5)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.3)'}
               >
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
             
-            <div style={{ padding: '0 32px 32px', marginTop: '-48px' }}>
-              <div style={{ width: '96px', height: '96px', borderRadius: '32px', backgroundColor: 'var(--primary-color)', border: '4px solid var(--bg-card)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-premium)', marginBottom: '16px' }}>
-                {viewedUser.profilePicture ? (
-                  <img src={viewedUser.profilePicture} alt={viewedUser.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <span style={{ fontSize: '2.5rem', fontWeight: '700', color: 'white' }}>{viewedUser.username?.[0]?.toUpperCase()}</span>
+            <div style={{ padding: '0 32px 32px', marginTop: '-60px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px' }}>
+                <div style={{ width: '110px', height: '110px', borderRadius: '32px', backgroundColor: 'var(--primary-color)', border: '6px solid var(--bg-card)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.3)', position: 'relative' }}>
+                  {viewedUser.profilePicture ? (
+                    <img src={viewedUser.profilePicture} alt={viewedUser.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{ fontSize: '2.8rem', fontWeight: '800', color: 'white' }}>{viewedUser.username?.[0]?.toUpperCase()}</span>
+                  )}
+                </div>
+                {viewedUser._id === user?.id && (
+                  <button 
+                    onClick={() => { setIsViewingProfile(false); setHasSkippedCompletion(false); }}
+                    style={{ padding: '10px 20px', backgroundColor: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', transition: 'var(--transition)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                  >Edit Profile</button>
                 )}
               </div>
               
-              <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-primary)' }}>{viewedUser.fullName || viewedUser.username}</h2>
-              {viewedUser.title && <p style={{ fontSize: '0.9rem', color: 'var(--primary-color)', fontWeight: '600', marginBottom: '16px' }}>{viewedUser.title}</p>}
-              
-              {viewedUser.description ? (
-                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '24px' }}>{viewedUser.description}</p>
-              ) : (
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '24px' }}>No bio provided.</p>
-              )}
-
-              <div style={{ display: 'grid', gap: '12px', padding: '16px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Username</span>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>@{viewedUser.username}</span>
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{viewedUser.fullName || viewedUser.username}</h2>
+                  {viewedUser.customStatus?.emoji && <span style={{ fontSize: '1.5rem' }}>{viewedUser.customStatus.emoji}</span>}
                 </div>
-                {viewedUser.location && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Location</span>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{viewedUser.location}</span>
+                {viewedUser.title && <p style={{ fontSize: '1rem', color: 'var(--primary-color)', fontWeight: '700', marginBottom: '12px' }}>{viewedUser.title}</p>}
+                
+                {viewedUser.customStatus?.text && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', backgroundColor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '10px', width: 'fit-content', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: '600' }}>{viewedUser.customStatus.text}</span>
                   </div>
                 )}
-                {viewedUser.company && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Company</span>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{viewedUser.company}</span>
+                
+                <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                  {viewedUser.description || (viewedUser._id === user?.id ? "Add a bio to tell people more about yourself." : "No bio provided.")}
+                </p>
+              </div>
+
+              {/* Status Section for Current User */}
+              {viewedUser._id === user?.id && (
+                <div style={{ padding: '24px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '24px' }}>
+                  <h3 style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>Status</h3>
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <input 
+                        type="text" 
+                        value={statusEmoji}
+                        onChange={(e) => setStatusEmoji(e.target.value)}
+                        placeholder="Emoji"
+                        style={{ width: '60px', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(0,0,0,0.2)', color: 'white', textAlign: 'center', fontSize: '1.2rem' }}
+                      />
+                      <input 
+                        type="text" 
+                        value={statusText}
+                        onChange={(e) => setStatusText(e.target.value)}
+                        placeholder="What's your status?"
+                        style={{ flex: 1, padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(0,0,0,0.2)', color: 'white', outline: 'none', fontSize: '0.9rem' }}
+                      />
+                      <button 
+                        onClick={updateCustomStatus}
+                        disabled={isUpdatingStatus}
+                        style={{ padding: '0 20px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem' }}
+                      >
+                        {isUpdatingStatus ? '...' : 'Save'}
+                      </button>
+                    </div>
+                    <button 
+                      onClick={() => updateStatus(user?.status === 'online' ? 'away' : 'online')}
+                      style={{ width: '100%', padding: '12px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', transition: 'var(--transition)' }}
+                    >
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: user?.status === 'online' ? '#10b981' : 'transparent', boxShadow: user?.status === 'away' ? 'inset 0 0 0 2px var(--text-secondary)' : 'none' }}></div>
+                      Set as {user?.status === 'online' ? 'Away' : 'Online'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Username</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '0.9rem' }}>@{viewedUser.username}</span>
+                </div>
+                <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Email</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{viewedUser.email}</span>
+                </div>
+                {viewedUser.location && (
+                  <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Location</span>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '0.9rem' }}>{viewedUser.location}</span>
+                  </div>
+                )}
+                {viewedUser.website && (
+                  <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Website</span>
+                    <a href={viewedUser.website} target="_blank" rel="noreferrer" style={{ color: 'var(--primary-color)', fontWeight: '700', fontSize: '0.9rem', textDecoration: 'none' }}>Visit</a>
                   </div>
                 )}
               </div>
@@ -2936,67 +3015,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Status Modal */}
-      {isStatusModalOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', zIndex: 4500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ width: '100%', maxWidth: '400px', backgroundColor: 'var(--bg-card)', borderRadius: '20px', border: '1px solid var(--glass-border)', boxShadow: 'var(--shadow-premium)', overflow: 'hidden' }}>
-            <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: '800' }}>Set a status</h3>
-              <button onClick={() => setIsStatusModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <form onSubmit={updateCustomStatus} style={{ padding: '24px' }}>
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '8px' }}>Status Emoji</label>
-                <input 
-                  type="text" 
-                  value={statusEmoji}
-                  onChange={(e) => setStatusEmoji(e.target.value)}
-                  placeholder="e.g. 🗓️, 🏠, 🏝️"
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--glass-border)', backgroundColor: 'var(--bg-dark)', color: 'white', outline: 'none' }}
-                />
-              </div>
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '8px' }}>Status Text</label>
-                <input 
-                  type="text" 
-                  value={statusText}
-                  onChange={(e) => setStatusText(e.target.value)}
-                  placeholder="What's your status?"
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--glass-border)', backgroundColor: 'var(--bg-dark)', color: 'white', outline: 'none' }}
-                />
-              </div>
 
-              <div style={{ marginBottom: '24px', paddingTop: '16px', borderTop: '1px solid var(--glass-border)' }}>
-                <button 
-                  type="button"
-                  onClick={() => updateStatus(user?.status === 'online' ? 'away' : 'online')}
-                  style={{ width: '100%', padding: '12px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', borderRadius: '10px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                >
-                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: user?.status === 'online' ? '#10b981' : 'transparent', boxShadow: user?.status === 'away' ? 'inset 0 0 0 2px var(--text-secondary)' : 'none', pointerEvents: 'none' }}></div>
-                  {user?.status === 'online' ? 'Set as Away' : 'Set as Online'}
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button 
-                  type="button" 
-                  onClick={() => setIsStatusModalOpen(false)}
-                  style={{ flex: 1, padding: '12px', background: 'transparent', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' }}
-                >Cancel</button>
-                <button 
-                  type="submit"
-                  disabled={isUpdatingStatus}
-                  style={{ flex: 2, padding: '12px', background: 'var(--primary-color)', border: 'none', color: 'white', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' }}
-                >
-                  {isUpdatingStatus ? 'Saving...' : 'Save Status'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
