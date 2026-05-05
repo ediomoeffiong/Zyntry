@@ -60,11 +60,14 @@ const Home = () => {
         top: 0,
         zIndex: 1000
       }}>
-        <h1 style={{ 
+        <h1 
+          onClick={() => navigate('/')}
+          style={{ 
           fontSize: '1.75rem', 
           fontWeight: '800', 
           color: 'var(--primary-color)',
           margin: 0,
+          cursor: 'pointer',
           fontFamily: "'Outfit', sans-serif"
         }}>Zyntry</h1>
         <div style={{ display: 'flex', gap: '16px' }}>
@@ -267,11 +270,14 @@ const Home = () => {
         textAlign: 'center',
         backgroundColor: 'var(--bg-dark)'
       }}>
-        <h2 style={{ 
+        <h2 
+          onClick={() => navigate('/')}
+          style={{ 
           fontSize: '1.5rem', 
           fontWeight: '800', 
           color: 'var(--primary-color)',
           marginBottom: '24px',
+          cursor: 'pointer',
           fontFamily: "'Outfit', sans-serif"
         }}>Zyntry</h2>
         <div style={{ display: 'flex', gap: '24px', justifyContent: 'center', marginBottom: '32px' }}>

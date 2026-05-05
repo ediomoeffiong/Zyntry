@@ -960,7 +960,10 @@ const Dashboard = () => {
           <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--primary-color)', marginBottom: '2px' }}>Zyntry</h2>
+                <h2 
+                  onClick={() => navigate('/')}
+                  style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--primary-color)', marginBottom: '2px', cursor: 'pointer' }}
+                >Zyntry</h2>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: '600' }}>

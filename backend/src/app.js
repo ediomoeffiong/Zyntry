@@ -25,6 +25,12 @@ console.log('Environment Check:', {
 const app = express();
 const server = http.createServer(app);
 
+// Body parser
+app.use(express.json());
+
+// Enable CORS
+app.use(cors());
+
 // Ensure DB connection for every request (crucial for serverless)
 app.use(async (req, res, next) => {
   await connectDB();
@@ -39,12 +45,6 @@ const io = new Server(server, {
 });
 
 app.set('io', io);
-
-// Body parser
-app.use(express.json());
-
-// Enable CORS
-app.use(cors());
 
 // Routes
 app.use('/api/auth', authRoutes);
