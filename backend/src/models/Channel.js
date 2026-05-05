@@ -11,6 +11,11 @@ const channelSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    description: {
+      type: String,
+      trim: true,
+    },
+
     participants: [
       {
         type: mongoose.Schema.Types.ObjectId,

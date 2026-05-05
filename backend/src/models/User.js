@@ -69,6 +69,19 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    status: {
+      type: String,
+      enum: ['online', 'away', 'offline'],
+      default: 'away',
+    },
+    lastActiveAt: {
+      type: Date,
+      default: Date.now,
+    },
+    customStatus: {
+      text: { type: String, trim: true, maxlength: 100 },
+      emoji: { type: String, trim: true },
+    },
   },
   {
     timestamps: true,

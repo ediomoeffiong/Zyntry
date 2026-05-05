@@ -11,6 +11,19 @@ const getUserProfile = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // VERIFY: Requester and Target User MUST share at least one workspace
+    // If it's the user's own profile, allow it
+    if (req.user.id !== req.params.userId) {
+      const Workspace = require('../models/Workspace');
+      const sharedWorkspace = await Workspace.findOne({
+        'members.user': { $all: [req.user.id, req.params.userId] }
+      });
+
+      if (!sharedWorkspace) {
+        return res.status(403).json({ message: 'Not authorized to view this profile. You do not share a workspace with this user.' });
+      }
+    }
+
     res.json(user);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -87,7 +100,77 @@ const updateProfile = async (req, res) => {
   }
 };
 
+// @desc    Update user presence status
+// @route   PUT /api/users/status
+// @access  Private
+const updateStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['online', 'away', 'offline'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { status, lastActiveAt: new Date() },
+      { new: true }
+    ).select('-password');
+
+    // Broadcast update via Socket.IO if available
+    const io = req.app.get('io');
+    if (io) {
+      const Workspace = require('../models/Workspace');
+      const workspaces = await Workspace.find({ 'members.user': req.user.id });
+      workspaces.forEach(ws => {
+        io.to(`workspace_${ws._id}`).emit('user_presence_update', {
+          userId: req.user.id,
+          status,
+          customStatus: user.customStatus
+        });
+      });
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update custom status (text + emoji)
+// @route   PUT /api/users/custom-status
+// @access  Private
+const updateCustomStatus = async (req, res) => {
+  try {
+    const { text, emoji } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { customStatus: { text, emoji }, lastActiveAt: new Date() },
+      { new: true }
+    ).select('-password');
+
+    // Broadcast update
+    const io = req.app.get('io');
+    if (io) {
+      const Workspace = require('../models/Workspace');
+      const workspaces = await Workspace.find({ 'members.user': req.user.id });
+      workspaces.forEach(ws => {
+        io.to(`workspace_${ws._id}`).emit('user_presence_update', {
+          userId: req.user.id,
+          status: user.status,
+          customStatus: user.customStatus
+        });
+      });
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getUserProfile,
   updateProfile,
+  updateStatus,
+  updateCustomStatus,
 };
