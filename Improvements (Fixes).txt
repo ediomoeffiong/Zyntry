@@ -2,14 +2,48 @@ Workspace Settings
 -> Should be able to set domain for workspace.
 -> Should be able to invite users via link and get approved by admin or moderator.
 
-Change "Invite sent successfully" to green instead of red.
 
-Users should need approval to join channels. When they click join, a request is sent to the admin of the workspace. Generally, moderators should be assigned to a channel so they can also approve a user request to join. Also, a user should need approval to create a channel - when the create button is clicked, the request should be sent to admins and if approved, the channel is created, and that user is a moderator.
+Prompt 4
 
-Admins should be able to revoke moderator rights too.
+Also, add individual settings for channels and even for direct messages. Channels settings should be different so even people who are just channel moderators can access the settings for channels. ***
+
+When I click leave channel, the dialog that comes up is the browser's native popup. Change that. ***
 
 
-Prompt
+Prompt 3 - Done
+
+Notification view issue on mobile. ***
+
+I need to reload before I see a request to join the channel or before I see I've been allowed to join the channel (things like this require a reload)... Fix this.
+
+When a user requested to join a channel, the notification sent was duplicated (two same notifications where sent). Fix that. Also, when the notifications were clicked, nothing happened.
+
+***
+
+I don't like how the info button for the channels react. It pushes up the message button and stuff when clicked. Work on it so it pops something at the right side instead of coming from under.
+
+When the notification button is clicked, it doesn't close when I click out on an empty space (unless I click the notifications button again). Fix that.
+
+
+Remove the star emoji and change the "Beginning of history" text to - "“The people who are crazy enough to think they can change the world are the ones who do.” — Steve Jobs." Make it fancy and stylish but simple.
+
+Introduce the feature for members to leave a channel or exit a workspace. There should be a confirmation for both. But specifically for the workspace, the user should be asked to put in his password before he can successfully exit the workspace.
+
+
+
+Prompt 2
+Change "Invite sent successfully" to green instead of red. - Done
+
+Users should need approval to join channels. When they click join, a request is sent to the admin of the workspace. Generally, moderators should be assigned to a channel so they can also approve a user request to join. Also, a user should need approval to create a channel - when the create button is clicked, the request should be sent to admins and if approved, the channel is created, and that user is a moderator. - Done
+
+Admins/Owners should be able to revoke moderator rights too.
+
+Introduce the feature for a user to be able to leave a channel and for an admin or moderator to remove a user from a channel or set an expiry date for a member to be automatically removed from a channel.
+
+When a user joins a workspace and tries to join a channel in the workspace. It brings error "workspace id is required" probably because the user never created a workspace. Fix that.
+
+
+Prompt 1
 I invited a user to a workspace, the inivitation was sent but when the user clicked "join", nothing happened. The workspace wasn't added. Fix that.
 
 Also, in the workspace settings, add it that admins and moderators can edit the workspace slug and let it be able to be used to invite users to join the workspace but their invitation would be pending till an admin or moderator approved it.

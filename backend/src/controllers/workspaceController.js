@@ -693,6 +693,72 @@ const deleteWorkspace = async (req, res) => {
   }
 };
 
+// @desc    Leave workspace
+// @route   POST /api/workspaces/:workspaceId/leave
+// @access  Private
+const leaveWorkspace = async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ message: 'Password is required to leave a workspace' });
+    }
+
+    const user = await User.findById(req.user.id);
+    const isMatch = await user.matchPassword(password);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Incorrect password' });
+    }
+
+    const workspace = await Workspace.findById(req.params.workspaceId);
+    if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
+
+    const member = workspace.members.find(m => m.user.toString() === req.user.id);
+    if (!member) return res.status(400).json({ message: 'You are not a member of this workspace' });
+
+    // Prevent leaving if last owner
+    if (member.role === 'owner') {
+      const ownerCount = workspace.members.filter(m => m.role === 'owner').length;
+      if (ownerCount <= 1) {
+        return res.status(400).json({ message: 'As the last owner, you cannot leave. Delete the workspace or transfer ownership first.' });
+      }
+    }
+
+    // Remove from workspace members
+    workspace.members = workspace.members.filter(m => m.user.toString() !== req.user.id);
+    
+    // Add audit log
+    workspace.auditLogs.push({
+      action: 'MEMBER_LEFT',
+      performedBy: req.user.id,
+      details: 'User left the workspace voluntarily'
+    });
+
+    await workspace.save();
+
+    // Remove workspace from user's list
+    await User.findByIdAndUpdate(req.user.id, {
+      $pull: { workspaces: workspace._id }
+    });
+
+    // Remove user from all channels in this workspace
+    await Channel.updateMany(
+      { workspaceId: workspace._id },
+      { 
+        $pull: { 
+          members: req.user.id,
+          moderators: req.user.id,
+          memberMetadata: { user: req.user.id }
+        } 
+      }
+    );
+
+    res.json({ message: 'Successfully left the workspace' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createWorkspace,
   requestToJoinWorkspace,
@@ -710,5 +776,6 @@ module.exports = {
   updateUserRole,
   removeUser,
   updateSettings,
-  deleteWorkspace
+  deleteWorkspace,
+  leaveWorkspace,
 };

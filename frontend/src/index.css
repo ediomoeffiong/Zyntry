@@ -231,12 +231,23 @@ input, textarea, button {
 }
 
 .info-sidebar {
-  width: 320px;
-  min-width: 320px;
-  border-left: 1px solid var(--glass-border);
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 340px;
   background-color: var(--bg-card);
+  border-left: 1px solid var(--glass-border);
+  z-index: 2500;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: -10px 0 30px rgba(0,0,0,0.5);
   display: flex;
   flex-direction: column;
+}
+
+.info-sidebar.open {
+  transform: translateX(0);
 }
 
 /* Mobile Specific Overrides */

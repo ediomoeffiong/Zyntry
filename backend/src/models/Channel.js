@@ -38,6 +38,23 @@ const channelSchema = new mongoose.Schema(
       ref: 'Workspace',
       required: true,
     },
+    isPrivate: {
+      type: Boolean,
+      default: false,
+    },
+    moderators: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+    memberMetadata: [
+      {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        expiryDate: { type: Date },
+        joinedAt: { type: Date, default: Date.now }
+      }
+    ]
   },
   {
     timestamps: true,

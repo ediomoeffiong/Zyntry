@@ -14,7 +14,11 @@ const notificationSchema = new mongoose.Schema(
         'JOIN_REQUEST_APPROVED',
         'JOIN_REQUEST_REJECTED',
         'DIRECT_MESSAGE',
-        'MENTION'
+        'MENTION',
+        'CHANNEL_JOIN_REQUEST',
+        'CHANNEL_CREATE_REQUEST',
+        'CHANNEL_REQUEST_APPROVED',
+        'CHANNEL_REQUEST_REJECTED'
       ],
       required: true,
     },

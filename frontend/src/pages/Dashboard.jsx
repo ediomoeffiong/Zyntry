@@ -45,6 +45,7 @@ const Dashboard = () => {
   const [inviteEmail, setInviteEmail] = useState('');
   const [isProcessingApproval, setIsProcessingApproval] = useState(false);
   const [userInvites, setUserInvites] = useState([]); // Invites for the current user across all workspaces
+  const [channelRequests, setChannelRequests] = useState([]); // Channel join/create requests
   const [viewedUser, setViewedUser] = useState(null);
   const [isViewingProfile, setIsViewingProfile] = useState(false);
 
@@ -59,6 +60,10 @@ const Dashboard = () => {
   const [isSearchingEmail, setIsSearchingEmail] = useState(false);
   const [foundWorkspaces, setFoundWorkspaces] = useState([]);
   const [isInfoSidebarOpen, setIsInfoSidebarOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isLeavingWorkspace, setIsLeavingWorkspace] = useState(false);
+  const [leavePassword, setLeavePassword] = useState('');
+  const [infoTab, setInfoTab] = useState('members'); // 'members' or 'settings'
   const [mentionSuggestions, setMentionSuggestions] = useState([]);
   const [mentionQuery, setMentionQuery] = useState('');
   const [showMentions, setShowMentions] = useState(false);
@@ -143,7 +148,13 @@ const Dashboard = () => {
       socketRef.current.on('new_notification', (notification) => {
         setNotifications(prev => [notification, ...prev]);
         setUnreadCount(prev => prev + 1);
+        if (['CHANNEL_JOIN_REQUEST', 'CHANNEL_CREATE_REQUEST', 'CHANNEL_REQUEST_APPROVED', 'CHANNEL_REQUEST_REJECTED', 'WORKSPACE_JOIN_REQUEST', 'WORKSPACE_REQUEST_APPROVED'].includes(notification.type)) {
+          setRefreshTrigger(prev => prev + 1);
+        }
       });
+
+      socketRef.current.on('channel_request_update', () => setRefreshTrigger(prev => prev + 1));
+      socketRef.current.on('channel_list_update', () => setRefreshTrigger(prev => prev + 1));
     }
 
     if (socketRef.current) {
@@ -257,6 +268,24 @@ const Dashboard = () => {
     }
   };
 
+  const fetchChannelRequests = async () => {
+    if (!activeWorkspace) return;
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
+        : 'https://zyntry.onrender.com/api';
+      const res = await axios.get(`${apiBaseUrl}/channels/requests?workspaceId=${activeWorkspace}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-workspace-id': activeWorkspace
+        }
+      });
+      setChannelRequests(res.data);
+    } catch (err) {
+      console.error('Error fetching channel requests:', err);
+    }
+  };
+
 
 
   useEffect(() => {
@@ -288,6 +317,14 @@ const Dashboard = () => {
         setIsSidebarOpen(true); // Always show sidebar on desktop
       }
     };
+
+    const handleClickOutside = (e) => {
+      if (isNotificationOpen && !e.target.closest('.notification-container')) {
+        setIsNotificationOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+
     window.addEventListener('resize', handleResize);
 
     const handleKeyDown = (e) => {
@@ -303,8 +340,9 @@ const Dashboard = () => {
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [isNotificationOpen]);
 
   const handleSearch = async (query) => {
     setSearchQuery(query);
@@ -397,15 +435,16 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (activeWorkspace) {
-      localStorage.setItem('activeWorkspace', activeWorkspace);
       fetchChannels();
       fetchWorkspaceDetails(activeWorkspace);
+      fetchChannelRequests();
+      localStorage.setItem('activeWorkspace', activeWorkspace);
       setSelectedChannel(null); // Clear selection when workspace changes
       setMessages([]);
     } else {
       localStorage.removeItem('activeWorkspace');
     }
-  }, [activeWorkspace]);
+  }, [activeWorkspace, refreshTrigger]);
 
   useEffect(() => {
     if (selectedChannel) {
@@ -479,21 +518,39 @@ const Dashboard = () => {
     }
   };
 
-  const handleNotificationClick = (notification) => {
-    markNotificationAsRead(notification._id);
-    setIsNotificationOpen(false);
-
-    if (notification.type === 'WORKSPACE_INVITE') {
-      setIsJoiningWorkspace(true);
-    } else if (notification.type === 'JOIN_REQUEST_APPROVED') {
-      fetchWorkspaces();
-      if (notification.metadata?.workspaceId) {
-        setActiveWorkspace(notification.metadata.workspaceId);
+  const handleNotificationClick = async (n) => {
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
+      await axios.put(`${apiBaseUrl}/notifications/${n._id}/read`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications(prev => prev.map(notif => notif._id === n._id ? { ...notif, isRead: true } : notif));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      
+      // Navigate based on type
+      if (n.type.includes('CHANNEL')) {
+        if (n.metadata?.channelId) {
+          setSelectedChannel(n.metadata.channelId);
+          setIsNotificationOpen(false);
+          setIsInfoSidebarOpen(false);
+        } else if (n.type.includes('REQUEST')) {
+          // Open workspace settings -> Requests tab
+          setIsSettingsOpen(true);
+          setSettingsTab('requests');
+          setIsNotificationOpen(false);
+        }
+      } else if (n.type.includes('WORKSPACE')) {
+        if (n.metadata?.workspaceId) {
+          setActiveWorkspace(n.metadata.workspaceId);
+          setIsNotificationOpen(false);
+        } else if (n.type.includes('REQUEST')) {
+          setIsSettingsOpen(true);
+          setSettingsTab('requests');
+          setIsNotificationOpen(false);
+        }
       }
-    } else if (notification.type === 'DIRECT_MESSAGE' || notification.type === 'MENTION') {
-      if (notification.metadata?.channelId) {
-        joinChannel(notification.metadata.channelId);
-      }
+    } catch (err) {
+      console.error('Error handling notification click:', err);
     }
   };
 
@@ -592,7 +649,12 @@ const Dashboard = () => {
       setNewChannelDescription('');
       setIsCreatingChannel(false);
       await fetchChannels();
-      joinChannel(res.data._id);
+      
+      if (res.status === 202) {
+        setSuccess('Channel creation request sent for approval!');
+      } else if (res.data?._id) {
+        joinChannel(res.data._id);
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Error creating channel');
     }
@@ -623,12 +685,21 @@ const Dashboard = () => {
       const apiBaseUrl = window.location.hostname === 'localhost'
         ? 'http://localhost:5000/api'
         : 'https://zyntry.onrender.com/api';
-      await axios.post(`${apiBaseUrl}/channels/${channelId}/join`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await axios.post(`${apiBaseUrl}/channels/${channelId}/join`, {}, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'x-workspace-id': activeWorkspace
+        }
       });
-      await fetchChannels();
-      setIsBrowsingChannels(false);
-      joinChannel(channelId);
+      
+      if (res.status === 202) {
+        setSuccess('Join request sent! Waiting for approval.');
+        setIsBrowsingChannels(false);
+      } else {
+        await fetchChannels();
+        setIsBrowsingChannels(false);
+        joinChannel(channelId);
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to join channel');
     }
@@ -775,6 +846,82 @@ const Dashboard = () => {
     }
   };
 
+  const handleChannelRequest = async (requestId, action) => {
+    setIsProcessingApproval(true);
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
+        : 'https://zyntry.onrender.com/api';
+      await axios.post(`${apiBaseUrl}/channels/requests/${requestId}`, { action }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-workspace-id': activeWorkspace
+        }
+      });
+      setSuccess(`Request ${action === 'approve' ? 'approved' : 'rejected'} successfully!`);
+      await fetchChannelRequests();
+      await fetchChannels();
+    } catch (err) {
+      setError(err.response?.data?.message || `Failed to ${action} request`);
+    } finally {
+      setIsProcessingApproval(false);
+    }
+  };
+
+  const handleRemoveChannelMember = async (channelId, userId) => {
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
+        : 'https://zyntry.onrender.com/api';
+      await axios.delete(`${apiBaseUrl}/channels/${channelId}/members/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-workspace-id': activeWorkspace
+        }
+      });
+      setSuccess('Member removed from channel');
+      await fetchChannels();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to remove member');
+    }
+  };
+
+  const handleToggleModerator = async (channelId, userId) => {
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
+        : 'https://zyntry.onrender.com/api';
+      await axios.patch(`${apiBaseUrl}/channels/${channelId}/moderators`, { userId }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-workspace-id': activeWorkspace
+        }
+      });
+      setSuccess('Moderator status updated');
+      await fetchChannels();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update moderator status');
+    }
+  };
+
+  const handleSetMemberExpiry = async (channelId, userId, expiryDate) => {
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
+        : 'https://zyntry.onrender.com/api';
+      await axios.patch(`${apiBaseUrl}/channels/${channelId}/members/${userId}/expiry`, { expiryDate }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-workspace-id': activeWorkspace
+        }
+      });
+      setSuccess('Expiry date updated');
+      await fetchChannels();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to set expiry date');
+    }
+  };
+
   const handleApproveRequest = async (userId) => {
     setIsProcessingApproval(true);
     try {
@@ -914,6 +1061,50 @@ const Dashboard = () => {
   }, [isJoiningWorkspace]);
 
   const activeChannelObj = channels.find(c => c._id === selectedChannel);
+
+  const handleLeaveWorkspace = async (e) => {
+    e.preventDefault();
+    if (!leavePassword) {
+      setError('Password is required to leave the workspace');
+      return;
+    }
+    
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
+      await axios.post(`${apiBaseUrl}/workspaces/${activeWorkspace}/leave`, { password: leavePassword }, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'x-workspace-id': activeWorkspace 
+        }
+      });
+      
+      setIsLeavingWorkspace(false);
+      setLeavePassword('');
+      setActiveWorkspace(null);
+      setSuccess('Successfully left the workspace');
+      fetchWorkspaces();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to leave workspace');
+    }
+  };
+
+  const handleLeaveCurrentChannel = async (channelId) => {
+    if (!window.confirm('Are you sure you want to leave this channel?')) return;
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
+      await axios.post(`${apiBaseUrl}/channels/${channelId}/leave`, {}, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'x-workspace-id': activeWorkspace
+        }
+      });
+      fetchChannels();
+      setSelectedChannel(null);
+      setSuccess('Left channel successfully');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to leave channel');
+    }
+  };
 
   return (
     <div className="dashboard-container">
@@ -1589,10 +1780,15 @@ const Dashboard = () => {
                     </div>
                   </div>
                 ) : messages.length === 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>✨</div>
-                    <h3 style={{ color: 'var(--text-primary)', marginBottom: '8px', fontSize: '1.1rem' }}>Beginning of history</h3>
-                    <p style={{ fontSize: '0.9rem', opacity: 0.7 }}>Say hello to {activeChannelObj?.isDirectMessage ? '@' : '#'}{getChannelDisplayName(activeChannelObj)}!</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 20px', textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.01)', borderRadius: '24px', margin: '20px 0', border: '1px solid var(--glass-border)', flexShrink: 0 }}>
+                    <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+                      <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A10.003 10.003 0 0012 3a10.003 10.003 0 00-6.237 2.152l-.053.09m15.357 10.28l-.054.09A10.003 10.003 0 0112 21a10.003 10.003 0 01-6.237-2.152l-.053-.09L12 11z" /></svg>
+                    </div>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: '400', fontStyle: 'italic', color: 'var(--text-primary)', maxWidth: '450px', lineHeight: '1.8', marginBottom: '16px', fontFamily: '"Outfit", sans-serif' }}>
+                      &ldquo;The people who are crazy enough to think they can change the world are the ones who do.&rdquo;
+                    </h3>
+                    <div style={{ width: '40px', height: '2px', backgroundColor: 'var(--primary-color)', margin: '16px 0' }}></div>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Steve Jobs</p>
                   </div>
                 ) : (
                   messages.map((msg, index) => {
@@ -1899,49 +2095,111 @@ const Dashboard = () => {
                           <div>
                             <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '12px' }}>Members ({activeChannelObj?.members?.length || 0})</h4>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                              {activeChannelObj?.members?.slice(0, 5).map(member => (
-                                <div key={member._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', borderRadius: '8px', transition: 'var(--transition)', cursor: 'pointer' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'} onClick={() => handleViewProfile(member._id)}>
-                                  <div style={{ position: 'relative' }}>
-                                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '700', color: 'white' }}>
-                                      {member.profilePicture ? <img src={member.profilePicture} style={{ width: '100%', height: '100%', borderRadius: '8px', objectFit: 'cover' }} alt={member.username || 'User'} /> : (member.username ? member.username[0].toUpperCase() : '?')}
+                              {activeChannelObj?.members?.map(member => {
+                                const isUserAdmin = ['owner', 'admin'].includes(workspaceDetails?.members?.find(m => m._id === user?.id)?.role);
+                                const isUserModerator = activeChannelObj?.moderators?.includes(user?.id);
+                                const isTargetModerator = activeChannelObj?.moderators?.includes(member._id);
+                                const canManage = (isUserAdmin || isUserModerator) && member._id !== user?.id;
+
+                                return (
+                                  <div key={member._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '12px', transition: 'var(--transition)', backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                                    <div style={{ position: 'relative' }}>
+                                      <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '700', color: 'white' }}>
+                                        {member.profilePicture ? <img src={member.profilePicture} style={{ width: '100%', height: '100%', borderRadius: '10px', objectFit: 'cover' }} alt={member.username || 'User'} /> : (member.username ? member.username[0].toUpperCase() : '?')}
+                                      </div>
+                                      <div style={{
+                                        position: 'absolute',
+                                        bottom: '-2px',
+                                        right: '-2px',
+                                        width: '12px',
+                                        height: '12px',
+                                        borderRadius: '50%',
+                                        border: '2px solid var(--bg-card)',
+                                        backgroundColor: member.status === 'online' ? '#10b981' : 'transparent',
+                                        boxShadow: member.status === 'away' ? 'inset 0 0 0 2px var(--text-secondary)' : 'none'
+                                      }}></div>
                                     </div>
-                                    <div style={{
-                                      position: 'absolute',
-                                      bottom: '-2px',
-                                      right: '-2px',
-                                      width: '10px',
-                                      height: '10px',
-                                      borderRadius: '50%',
-                                      border: '2px solid var(--bg-card)',
-                                      backgroundColor: member.status === 'online' ? '#10b981' : 'transparent',
-                                      boxShadow: member.status === 'away' ? 'inset 0 0 0 2px var(--text-secondary)' : 'none',
-                                      pointerEvents: 'none'
-                                    }}></div>
-                                  </div>
-                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <span style={{ fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center' }}>
-                                      {member.username || 'Unknown'} {member._id === user?.id && '(You)'}
+                                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                        <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          {member.username}
+                                        </span>
+                                        {isTargetModerator && (
+                                          <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--primary-color)', textTransform: 'uppercase', fontWeight: '800' }}>
+                                            MOD
+                                          </span>
+                                        )}
+                                      </div>
                                       {(() => {
-                                        const wsRole = workspaceDetails?.members?.find(m => m._id === member._id)?.role;
-                                        if (wsRole && wsRole !== 'member') {
+                                        const meta = activeChannelObj.memberMetadata?.find(m => (m.user?._id || m.user) === member._id);
+                                        if (meta?.expiryDate) {
+                                          const isExpired = new Date(meta.expiryDate) < new Date();
                                           return (
-                                            <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700', marginLeft: '6px' }}>
-                                              {wsRole}
+                                            <span style={{ fontSize: '0.65rem', color: isExpired ? '#ef4444' : 'var(--text-secondary)', fontWeight: '600' }}>
+                                              {isExpired ? 'Expired' : `Expires: ${new Date(meta.expiryDate).toLocaleDateString()}`}
                                             </span>
                                           );
                                         }
-                                        return null;
+                                        return <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{member.title || 'Member'}</span>;
                                       })()}
-                                    </span>
-                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{member.title || 'Member'}</span>
+                                    </div>
+                                    
+                                    {canManage && (
+                                      <div style={{ display: 'flex', gap: '4px' }}>
+                                        {isUserAdmin && (
+                                          <button 
+                                            onClick={(e) => { e.stopPropagation(); handleToggleModerator(activeChannelObj._id, member._id); }}
+                                            title={isTargetModerator ? "Revoke Mod" : "Make Mod"}
+                                            style={{ background: 'transparent', border: 'none', color: isTargetModerator ? 'var(--primary-color)' : 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
+                                          >
+                                            <svg width="14" height="14" fill={isTargetModerator ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                          </button>
+                                        )}
+                                        <button 
+                                          onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            const date = prompt("Enter expiry date (YYYY-MM-DD) or leave empty to clear:");
+                                            if (date !== null) handleSetMemberExpiry(activeChannelObj._id, member._id, date || null);
+                                          }}
+                                          title="Set Expiry"
+                                          style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
+                                        >
+                                          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                        </button>
+                                        <button 
+                                          onClick={(e) => { e.stopPropagation(); if (confirm("Remove user from channel?")) handleRemoveChannelMember(activeChannelObj._id, member._id); }}
+                                          title="Remove User"
+                                          style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                                        >
+                                          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
-                                </div>
-                              ))}
-                              {activeChannelObj?.members?.length > 5 && (
-                                <button style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left', padding: '8px' }}>
-                                  Show all {activeChannelObj.members.length} members
+                                );
+                              })}
+                            </div>
+
+                            {/* Individual Channel Settings */}
+                            <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--glass-border)' }}>
+                              <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Conversation Settings</h4>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {!activeChannelObj?.isDirectMessage && (
+                                  <button
+                                    onClick={() => handleLeaveCurrentChannel(activeChannelObj._id)}
+                                    style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                  >
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                                    Leave Channel
+                                  </button>
+                                )}
+                                <button
+                                  style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                >
+                                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                  Mute Notifications
                                 </button>
-                              )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -2567,9 +2825,66 @@ const Dashboard = () => {
                 onClick={() => setSettingsTab('audit')}
                 style={{ padding: '12px 0', background: 'transparent', border: 'none', borderBottom: settingsTab === 'audit' ? '2px solid var(--primary-color)' : '2px solid transparent', color: settingsTab === 'audit' ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: '600', cursor: 'pointer' }}
               >Audit Log</button>
+              <button 
+                onClick={() => setSettingsTab('channelRequests')}
+                style={{ padding: '12px 0', background: 'transparent', border: 'none', borderBottom: settingsTab === 'channelRequests' ? '2px solid var(--primary-color)' : '2px solid transparent', color: settingsTab === 'channelRequests' ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: '600', cursor: 'pointer', position: 'relative' }}
+              >
+                Channel Requests
+                {channelRequests.length > 0 && (
+                  <span style={{ position: 'absolute', top: '8px', right: '-12px', width: '18px', height: '18px', backgroundColor: '#ef4444', color: 'white', borderRadius: '50%', fontSize: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800' }}>
+                    {channelRequests.length}
+                  </span>
+                )}
+              </button>
             </div>
 
             <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+              {settingsTab === 'channelRequests' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '4px' }}>Pending Channel Requests</h4>
+                  {channelRequests.length === 0 ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)', backgroundColor: 'rgba(255,255,255,0.01)', borderRadius: '12px', border: '1px dashed var(--glass-border)' }}>
+                      No pending requests.
+                    </div>
+                  ) : (
+                    channelRequests.map(req => (
+                      <div key={req._id} style={{ padding: '16px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>
+                              {req.requester.username[0].toUpperCase()}
+                            </div>
+                            <div>
+                              <p style={{ fontSize: '0.9rem', fontWeight: '700' }}>{req.requester.username}</p>
+                              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                {req.type === 'create_channel' ? `Wants to create #${req.channelData.name}` : `Wants to join #${req.channelId?.name}`}
+                              </p>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button 
+                              onClick={() => handleChannelRequest(req._id, 'reject')}
+                              disabled={isProcessingApproval}
+                              style={{ padding: '6px 12px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
+                            >Decline</button>
+                            <button 
+                              onClick={() => handleChannelRequest(req._id, 'approve')}
+                              disabled={isProcessingApproval}
+                              style={{ padding: '6px 12px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
+                            >Approve</button>
+                          </div>
+                        </div>
+                        {req.channelData?.description && (
+                          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '8px', backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: '6px' }}>
+                            {req.channelData.description}
+                          </p>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
               {settingsTab === 'members' && (
                 <>
                   <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Manage Members</h4>
@@ -2664,6 +2979,16 @@ const Dashboard = () => {
                       >Delete Workspace</button>
                     </div>
                   )}
+                  {workspaceDetails?.createdBy !== user?.id && (
+                    <div style={{ marginTop: '40px', paddingTop: '24px', borderTop: '1px solid var(--glass-border)' }}>
+                      <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: '#ef4444', fontWeight: '700', marginBottom: '12px' }}>Leave Workspace</h4>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>You will lose access to all channels and messages in this workspace.</p>
+                      <button
+                        onClick={() => setIsLeavingWorkspace(true)}
+                        style={{ padding: '10px 16px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', width: '100%' }}
+                      >Leave Workspace</button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2692,6 +3017,49 @@ const Dashboard = () => {
         </div>
       )}
 
+
+      {/* Leave Workspace Confirmation Modal */}
+      {isLeavingWorkspace && (
+        <div className="modal-overlay" style={{ zIndex: 6000 }}>
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ef4444' }}>Leave Workspace</h2>
+              <button onClick={() => setIsLeavingWorkspace(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div style={{ padding: '24px' }}>
+              <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: '1.6' }}>
+                Are you sure you want to leave <strong>{workspaceDetails?.name}</strong>? This action requires your password for verification.
+              </p>
+              <form onSubmit={handleLeaveWorkspace}>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>Password</label>
+                  <input
+                    type="password"
+                    value={leavePassword}
+                    onChange={(e) => setLeavePassword(e.target.value)}
+                    placeholder="Enter your password"
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none' }}
+                    required
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsLeavingWorkspace(false)}
+                    style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}
+                  >Cancel</button>
+                  <button
+                    type="submit"
+                    style={{ flex: 1, padding: '12px', background: '#ef4444', border: 'none', color: 'white', borderRadius: '10px', fontWeight: '700', cursor: 'pointer' }}
+                  >Confirm & Leave</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

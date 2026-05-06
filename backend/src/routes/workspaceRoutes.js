@@ -18,6 +18,7 @@ const {
   removeUser,
   updateSettings,
   deleteWorkspace,
+  leaveWorkspace,
 } = require('../controllers/workspaceController');
 const { protect } = require('../middleware/authMiddleware');
 const { verifyWorkspaceMembership } = require('../middleware/workspaceMiddleware');
@@ -46,5 +47,6 @@ router.post('/:workspaceId/reject', protect, verifyWorkspaceMembership, rejectRe
 
 router.put('/:workspaceId/members/:userId/role', protect, verifyWorkspaceMembership, updateUserRole);
 router.delete('/:workspaceId/members/:userId', protect, verifyWorkspaceMembership, removeUser);
+router.post('/:workspaceId/leave', protect, verifyWorkspaceMembership, leaveWorkspace);
 
 module.exports = router;

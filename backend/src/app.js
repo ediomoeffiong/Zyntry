@@ -283,8 +283,13 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 if (!process.env.VERCEL) {
-  server.listen(PORT, () => {
-    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  connectDB().then(() => {
+    server.listen(PORT, () => {
+      console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+    });
+  }).catch(err => {
+    console.error('Failed to connect to MongoDB on startup:', err.message);
+    process.exit(1);
   });
 }
 
