@@ -31,6 +31,7 @@ const Login = () => {
         <div className="animate-fade-in" style={{ 
           width: '100%', 
           maxWidth: '440px', 
+          width: 'min(440px, 100%)',
           background: 'var(--glass-bg)', 
           backdropFilter: 'blur(12px)',
           border: '1px solid var(--glass-border)',
@@ -121,6 +122,7 @@ const Login = () => {
       <div className="animate-fade-in" style={{ 
         width: '100%', 
         maxWidth: '440px', 
+        width: 'min(440px, 100%)',
         background: 'var(--glass-bg)', 
         backdropFilter: 'blur(12px)',
         border: '1px solid var(--glass-border)',

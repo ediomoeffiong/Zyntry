@@ -55,8 +55,22 @@ const workspaceSchema = new mongoose.Schema(
         type: String,
         enum: ['admin', 'everyone'],
         default: 'everyone'
+      },
+      allowedDomain: {
+        type: String,
+        trim: true,
+        lowercase: true
       }
     },
+    auditLogs: [
+      {
+        action: String,
+        performedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        targetUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        details: String,
+        createdAt: { type: Date, default: Date.now }
+      }
+    ],
     pendingRequests: [
       {
         type: mongoose.Schema.Types.ObjectId,

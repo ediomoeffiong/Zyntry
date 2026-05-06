@@ -1,0 +1,21 @@
+Workspace Settings
+-> Should be able to set domain for workspace.
+-> Should be able to invite users via link and get approved by admin or moderator.
+
+Change "Invite sent successfully" to green instead of red.
+
+Users should need approval to join channels. When they click join, a request is sent to the admin of the workspace. Generally, moderators should be assigned to a channel so they can also approve a user request to join. Also, a user should need approval to create a channel - when the create button is clicked, the request should be sent to admins and if approved, the channel is created, and that user is a moderator.
+
+Admins should be able to revoke moderator rights too.
+
+
+Prompt
+I invited a user to a workspace, the inivitation was sent but when the user clicked "join", nothing happened. The workspace wasn't added. Fix that.
+
+Also, in the workspace settings, add it that admins and moderators can edit the workspace slug and let it be able to be used to invite users to join the workspace but their invitation would be pending till an admin or moderator approved it.
+
+Also, the admin should be able to see the person that approved a member request to join the workspace, or the moderator that elevated a user's positon to moderator, and so on.
+
+also, change the invite sent successfully button from red to green.
+
+Lastly, in the workspace settings, there should be able to set the workspace domain (users with email that have the domain can see and request to join the workspaces related/linked to it).

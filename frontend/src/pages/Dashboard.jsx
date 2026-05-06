@@ -17,6 +17,7 @@ const Dashboard = () => {
   const [dmSearchQuery, setDmSearchQuery] = useState('');
   const [isCreatingDM, setIsCreatingDM] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [isLoadingChannels, setIsLoadingChannels] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -32,6 +33,9 @@ const Dashboard = () => {
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [newWorkspaceDescription, setNewWorkspaceDescription] = useState('');
   const [newWorkspaceSlug, setNewWorkspaceSlug] = useState('');
+  const [editSlug, setEditSlug] = useState('');
+  const [editDomain, setEditDomain] = useState('');
+  const [settingsTab, setSettingsTab] = useState('members');
   const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false);
   const [isJoiningWorkspace, setIsJoiningWorkspace] = useState(false);
   const [publicWorkspaces, setPublicWorkspaces] = useState([]);
@@ -58,6 +62,7 @@ const Dashboard = () => {
   const [mentionSuggestions, setMentionSuggestions] = useState([]);
   const [mentionQuery, setMentionQuery] = useState('');
   const [showMentions, setShowMentions] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
 
 
@@ -134,28 +139,32 @@ const Dashboard = () => {
       socketRef.current = newSocket;
     }
 
-    socketRef.current.on('new_notification', (notification) => {
-      setNotifications(prev => [notification, ...prev]);
-      setUnreadCount(prev => prev + 1);
-    });
-
-    socketRef.current.on('user_presence_update', (data) => {
-      const { userId, status, customStatus } = data;
-      // Update channels members
-      setChannels(prev => prev.map(ch => ({
-        ...ch,
-        members: ch.members.map(m => m._id === userId ? { ...m, status, customStatus: customStatus || m.customStatus } : m),
-        participants: ch.participants.map(p => p._id === userId ? { ...p, status, customStatus: customStatus || p.customStatus } : p)
-      })));
-      // Update workspaceDetails members
-      setWorkspaceDetails(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          members: prev.members.map(m => m._id === userId ? { ...m, status, customStatus: customStatus || m.customStatus } : m)
-        };
+    if (socketRef.current) {
+      socketRef.current.on('new_notification', (notification) => {
+        setNotifications(prev => [notification, ...prev]);
+        setUnreadCount(prev => prev + 1);
       });
-    });
+    }
+
+    if (socketRef.current) {
+      socketRef.current.on('user_presence_update', (data) => {
+        const { userId, status, customStatus } = data;
+        // Update channels members
+        setChannels(prev => prev.map(ch => ({
+          ...ch,
+          members: ch.members.map(m => m._id === userId ? { ...m, status, customStatus: customStatus || m.customStatus } : m),
+          participants: ch.participants.map(p => p._id === userId ? { ...p, status, customStatus: customStatus || p.customStatus } : p)
+        })));
+        // Update workspaceDetails members
+        setWorkspaceDetails(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            members: prev.members.map(m => m._id === userId ? { ...m, status, customStatus: customStatus || m.customStatus } : m)
+          };
+        });
+      });
+    }
 
     // Inactivity heartbeat
     const heartbeat = setInterval(() => {
@@ -270,8 +279,17 @@ const Dashboard = () => {
     }
   }, [token, navigate]);
 
-  // Global Search Shortcut
+  // Global Search Shortcut & Resize Listener
   useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setIsSidebarOpen(true); // Always show sidebar on desktop
+      }
+    };
+    window.addEventListener('resize', handleResize);
+
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
         e.preventDefault();
@@ -282,7 +300,10 @@ const Dashboard = () => {
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const handleSearch = async (query) => {
@@ -367,6 +388,8 @@ const Dashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setWorkspaceDetails(res.data);
+      setEditSlug(res.data.slug || '');
+      setEditDomain(res.data.settings?.allowedDomain || '');
     } catch (err) {
       console.error('Error fetching workspace details:', err);
     }
@@ -655,6 +678,13 @@ const Dashboard = () => {
     }
   }, [error]);
 
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
   const getChannelDisplayName = (ch) => {
     if (ch.isDirectMessage) {
       const otherUser = ch.participants.find(p => p._id !== user.id);
@@ -713,7 +743,7 @@ const Dashboard = () => {
       await axios.post(`${apiBaseUrl}/workspaces/${workspaceId}/request`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setError('Join request sent! Waiting for owner approval.');
+      setSuccess('Join request sent! Waiting for owner approval.');
       setIsJoiningWorkspace(false);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send join request');
@@ -739,7 +769,7 @@ const Dashboard = () => {
       setInviteEmail('');
       setIsInvitingUser(false);
       fetchWorkspaceDetails(activeWorkspace);
-      setError('Invite sent successfully!');
+      setSuccess('Invite sent successfully!');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send invite');
     }
@@ -793,7 +823,7 @@ const Dashboard = () => {
       await axios.post(`${apiBaseUrl}/workspaces/invite/accept`, { workspaceId }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setError('Invite accepted! Waiting for owner approval.');
+      setSuccess('Invite accepted! You have joined the workspace.');
       fetchUserInvites();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to accept invite');
@@ -840,6 +870,26 @@ const Dashboard = () => {
     }
   };
 
+  const handleUpdateWorkspaceSettings = async () => {
+    try {
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
+        : 'https://zyntry.onrender.com/api';
+      await axios.put(`${apiBaseUrl}/workspaces/${activeWorkspace}/settings`, {
+        slug: editSlug,
+        settings: {
+          allowedDomain: editDomain
+        }
+      }, {
+        headers: { Authorization: `Bearer ${token}`, 'x-workspace-id': activeWorkspace }
+      });
+      setSuccess('Workspace settings updated successfully');
+      fetchWorkspaceDetails(activeWorkspace);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update settings');
+    }
+  };
+
   const handleViewProfile = async (userId) => {
     try {
       const apiBaseUrl = window.location.hostname === 'localhost'
@@ -866,18 +916,34 @@ const Dashboard = () => {
   const activeChannelObj = channels.find(c => c._id === selectedChannel);
 
   return (
-    <div style={{
-      display: 'flex',
-      height: '100vh',
-      minHeight: '100vh',
-      height: '100dvh', // Modern dynamic viewport height for mobile
-      backgroundColor: 'var(--bg-dark)',
-      color: 'var(--text-primary)',
-      overflow: 'hidden',
-      position: 'relative'
-    }}>
+    <div className="dashboard-container">
+      {/* Mobile Sidebar Toggle (Floating if no workspace) */}
+      {isMobile && !activeWorkspace && (
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            left: '20px',
+            zIndex: 1000,
+            backgroundColor: 'var(--primary-color)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px',
+            width: '44px',
+            height: '44px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: 'var(--shadow-premium)'
+          }}
+        >
+          <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
+      )}
+
       {/* Mobile Overlay */}
-      {isSidebarOpen && window.innerWidth <= 768 && (
+      {isSidebarOpen && isMobile && (
         <div className="mobile-overlay" onClick={() => setIsSidebarOpen(false)} />
       )}
 
@@ -901,18 +967,28 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Workspace Rail (Slack-style far left bar) */}
-      <div style={{
-        width: '72px',
-        backgroundColor: 'var(--bg-dark)',
-        borderRight: '1px solid var(--glass-border)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '16px 0',
-        gap: '12px',
-        zIndex: 1002
-      }}>
+      {/* Success Notification */}
+      {success && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          backgroundColor: '#10b981',
+          color: 'white',
+          padding: '12px 24px',
+          borderRadius: '12px',
+          boxShadow: 'var(--shadow-premium)',
+          zIndex: 2000,
+          animation: 'fadeIn 0.3s ease-out',
+          fontSize: '0.9rem',
+          fontWeight: '500'
+        }}>
+          {success}
+        </div>
+      )}
+
+      {/* Workspace Rail */}
+      <div className={`workspace-rail ${isMobile && isSidebarOpen ? 'open' : ''}`}>
         {workspaces.map(ws => (
           <div
             key={ws._id}
@@ -945,18 +1021,7 @@ const Dashboard = () => {
 
       {/* Sidebar */}
       {activeWorkspace && (
-        <div className={`mobile-sidebar ${isSidebarOpen ? '' : 'sidebar-closed'}`} style={{
-          width: isSidebarOpen ? '300px' : '0',
-          minWidth: isSidebarOpen ? '300px' : '0',
-          backgroundColor: 'var(--bg-card)',
-          borderRight: '1px solid var(--glass-border)',
-          display: 'flex',
-          flexDirection: 'column',
-          transition: 'var(--transition)',
-          overflow: 'hidden',
-          position: 'relative',
-          zIndex: 1001
-        }}>
+        <div className={`mobile-sidebar ${isSidebarOpen ? 'open' : 'sidebar-closed'}`} style={{ left: isMobile ? (isSidebarOpen ? '72px' : '-300px') : '0' }}>
           <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1323,7 +1388,7 @@ const Dashboard = () => {
       )}
 
       {/* Main Content */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', minWidth: 0 }}>
+      <div className="main-content">
         {!activeWorkspace ? (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', textAlign: 'center', padding: '40px', backgroundColor: 'var(--bg-dark)' }}>
             <div style={{ width: '100%', maxWidth: '600px', padding: '40px', backgroundColor: 'var(--bg-card)', borderRadius: '24px', border: '1px solid var(--glass-border)', boxShadow: 'var(--shadow-premium)' }}>
@@ -1379,16 +1444,7 @@ const Dashboard = () => {
         ) : (
           selectedChannel ? (
             <>
-              <header style={{
-                padding: '16px 24px',
-                borderBottom: '1px solid var(--glass-border)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-                backgroundColor: 'var(--glass-bg)',
-                backdropFilter: 'blur(10px)',
-                zIndex: 10
-              }}>
+              <header className="chat-header">
                 <button
                   onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                   style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -1396,7 +1452,7 @@ const Dashboard = () => {
                   <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
                 </button>
 
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="hidden-mobile" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <div
                     onClick={() => setIsSearching(true)}
                     style={{
@@ -1466,7 +1522,7 @@ const Dashboard = () => {
                         position: 'absolute',
                         top: '100%',
                         right: 0,
-                        width: '320px',
+                        width: isMobile ? '280px' : '320px',
                         backgroundColor: 'var(--bg-card)',
                         borderRadius: '16px',
                         border: '1px solid var(--glass-border)',
@@ -1524,15 +1580,7 @@ const Dashboard = () => {
                 </div>
               </header>
 
-              <div style={{
-                flex: 1,
-                padding: '24px',
-                overflowY: 'auto',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px',
-                backgroundColor: 'var(--bg-dark)'
-              }}>
+              <div className="message-list">
                 {isLoadingMessages ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1583,7 +1631,7 @@ const Dashboard = () => {
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: isOwn ? 'flex-end' : 'flex-start',
-                          maxWidth: '75%'
+                          maxWidth: isMobile ? '90%' : '75%'
                         }}>
                           {showHeader && (
                             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px', padding: '0 4px' }}>
@@ -1636,7 +1684,7 @@ const Dashboard = () => {
                 <div ref={messagesEndRef} />
               </div>
 
-              <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg-dark)' }}>
+              <div className="message-input-area">
                 <form onSubmit={sendMessage} style={{
                   display: 'flex',
                   gap: '12px',
@@ -1753,15 +1801,7 @@ const Dashboard = () => {
 
               {/* Info Sidebar (Inside Chat Area) */}
               {isInfoSidebarOpen && (
-                <div style={{
-                  width: '320px',
-                  minWidth: '320px',
-                  borderLeft: '1px solid var(--glass-border)',
-                  backgroundColor: 'var(--bg-card)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  animation: 'slideInRight 0.3s ease-out'
-                }}>
+                <div className={`info-sidebar ${isInfoSidebarOpen ? 'open' : ''}`}>
                   <div style={{ padding: '20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Details</h3>
                     <button onClick={() => setIsInfoSidebarOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -1918,7 +1958,7 @@ const Dashboard = () => {
               </div>
               <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>Welcome to Zyntry</h2>
               <p style={{ maxWidth: '400px', lineHeight: '1.6', fontSize: '0.95rem' }}>Select a channel from the sidebar to join the conversation and start messaging in real-time.</p>
-              {window.innerWidth <= 768 && (
+              {isMobile && (
                 <button
                   onClick={() => setIsSidebarOpen(true)}
                   style={{ marginTop: '24px', padding: '12px 24px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}
@@ -2007,31 +2047,8 @@ const Dashboard = () => {
 
       {/* Create Workspace Modal */}
       {isCreatingWorkspace && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          backgroundColor: 'rgba(0,0,0,0.8)',
-          backdropFilter: 'blur(8px)',
-          zIndex: 4000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
-        }}>
-          <div style={{
-            width: '100%',
-            maxWidth: '400px',
-            backgroundColor: 'var(--bg-card)',
-            borderRadius: '16px',
-            border: '1px solid var(--glass-border)',
-            boxShadow: 'var(--shadow-premium)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
+        <div className="modal-overlay" onClick={() => setIsCreatingWorkspace(false)}>
+          <div className="modal-content" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--primary-color)' }}>Create Workspace</h3>
               <button onClick={() => setIsCreatingWorkspace(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -2099,32 +2116,8 @@ const Dashboard = () => {
 
       {/* Join Workspace Modal */}
       {isJoiningWorkspace && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          backgroundColor: 'rgba(0,0,0,0.8)',
-          backdropFilter: 'blur(8px)',
-          zIndex: 4000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
-        }}>
-          <div style={{
-            width: '100%',
-            maxWidth: '500px',
-            backgroundColor: 'var(--bg-card)',
-            borderRadius: '16px',
-            border: '1px solid var(--glass-border)',
-            boxShadow: 'var(--shadow-premium)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            maxHeight: '80vh'
-          }}>
+        <div className="modal-overlay" onClick={() => setIsJoiningWorkspace(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--primary-color)' }}>Join Workspace</h3>
               <button onClick={() => setIsJoiningWorkspace(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -2254,30 +2247,8 @@ const Dashboard = () => {
 
       {/* User Profile Modal */}
       {isViewingProfile && viewedUser && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          backgroundColor: 'rgba(0,0,0,0.85)',
-          backdropFilter: 'blur(12px)',
-          zIndex: 5000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
-        }}>
-          <div style={{
-            width: '100%',
-            maxWidth: '480px',
-            backgroundColor: 'var(--bg-card)',
-            borderRadius: '28px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-            overflow: 'hidden',
-            position: 'relative'
-          }}>
+        <div className="modal-overlay" onClick={() => { setIsViewingProfile(false); setViewedUser(null); }}>
+          <div className="modal-content" style={{ maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
             {/* Header Banner */}
             <div style={{ position: 'relative', height: '140px', background: `linear-gradient(135deg, var(--primary-color) 0%, #059669 100%)` }}>
               <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0.2, backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
@@ -2391,31 +2362,8 @@ const Dashboard = () => {
 
       {/* Invite User Modal */}
       {isInvitingUser && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          backgroundColor: 'rgba(0,0,0,0.8)',
-          backdropFilter: 'blur(8px)',
-          zIndex: 4000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
-        }}>
-          <div style={{
-            width: '100%',
-            maxWidth: '400px',
-            backgroundColor: 'var(--bg-card)',
-            borderRadius: '16px',
-            border: '1px solid var(--glass-border)',
-            boxShadow: 'var(--shadow-premium)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
+        <div className="modal-overlay" onClick={() => setIsInvitingUser(false)}>
+          <div className="modal-content" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--primary-color)' }}>Invite to Workspace</h3>
               <button onClick={() => setIsInvitingUser(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -2593,21 +2541,39 @@ const Dashboard = () => {
       `}</style>
       {/* Workspace Settings Modal */}
       {isWorkspaceSettingsOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', zIndex: 4500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ width: '100%', maxWidth: '600px', maxHeight: '80vh', backgroundColor: 'var(--bg-card)', borderRadius: '20px', border: '1px solid var(--glass-border)', boxShadow: 'var(--shadow-premium)', display: 'flex', flexDirection: 'column' }}>
+        <div className="modal-overlay" onClick={() => { setIsWorkspaceSettingsOpen(false); setSettingsTab('members'); }}>
+          <div className="modal-content" style={{ maxWidth: '640px', maxHeight: '85vh' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h3 style={{ fontSize: '1.2rem', fontWeight: '800' }}>Workspace Settings</h3>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{workspaces.find(ws => ws._id === activeWorkspace)?.name}</p>
               </div>
-              <button onClick={() => setIsWorkspaceSettingsOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <button onClick={() => { setIsWorkspaceSettingsOpen(false); setSettingsTab('members'); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
 
+            {/* Tabs */}
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--glass-border)', padding: '0 24px', gap: '20px' }}>
+              <button 
+                onClick={() => setSettingsTab('members')}
+                style={{ padding: '12px 0', background: 'transparent', border: 'none', borderBottom: settingsTab === 'members' ? '2px solid var(--primary-color)' : '2px solid transparent', color: settingsTab === 'members' ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: '600', cursor: 'pointer' }}
+              >Members</button>
+              <button 
+                onClick={() => setSettingsTab('general')}
+                style={{ padding: '12px 0', background: 'transparent', border: 'none', borderBottom: settingsTab === 'general' ? '2px solid var(--primary-color)' : '2px solid transparent', color: settingsTab === 'general' ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: '600', cursor: 'pointer' }}
+              >General</button>
+              <button 
+                onClick={() => setSettingsTab('audit')}
+                style={{ padding: '12px 0', background: 'transparent', border: 'none', borderBottom: settingsTab === 'audit' ? '2px solid var(--primary-color)' : '2px solid transparent', color: settingsTab === 'audit' ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: '600', cursor: 'pointer' }}
+              >Audit Log</button>
+            </div>
+
             <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
-              <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Manage Members</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {settingsTab === 'members' && (
+                <>
+                  <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Manage Members</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {workspaceDetails?.members?.map(member => {
                   const isOwner = workspaceDetails.createdBy === user?.id;
                   const isSelf = member._id === user?.id;
@@ -2652,16 +2618,73 @@ const Dashboard = () => {
                     </div>
                   );
                 })}
-              </div>
+                  </div>
+                </>
+              )}
 
-              {workspaceDetails?.createdBy === user?.id && (
-                <div style={{ marginTop: '40px', paddingTop: '24px', borderTop: '1px solid var(--glass-border)' }}>
-                  <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: '#ef4444', fontWeight: '700', marginBottom: '12px' }}>Danger Zone</h4>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>Permanently delete this workspace and all its channels, messages, and files.</p>
-                  <button
-                    onClick={handleDeleteWorkspace}
-                    style={{ padding: '10px 16px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', width: '100%' }}
-                  >Delete Workspace</button>
+              {settingsTab === 'general' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: '700' }}>General Settings</h4>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-primary)' }}>Workspace Slug</label>
+                    <input 
+                      type="text" 
+                      value={editSlug} 
+                      onChange={(e) => setEditSlug(e.target.value)} 
+                      style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none' }} 
+                    />
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Share this slug so people can join: <strong>{window.location.origin}/join/{editSlug}</strong></p>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-primary)' }}>Allowed Email Domain</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. company.com"
+                      value={editDomain} 
+                      onChange={(e) => setEditDomain(e.target.value)} 
+                      style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none' }} 
+                    />
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Users with this email domain will automatically see your workspace.</p>
+                  </div>
+
+                  <button 
+                    onClick={handleUpdateWorkspaceSettings}
+                    style={{ padding: '10px', background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', marginTop: '10px' }}
+                  >Save Settings</button>
+
+                  {workspaceDetails?.createdBy === user?.id && (
+                    <div style={{ marginTop: '40px', paddingTop: '24px', borderTop: '1px solid var(--glass-border)' }}>
+                      <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: '#ef4444', fontWeight: '700', marginBottom: '12px' }}>Danger Zone</h4>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>Permanently delete this workspace and all its channels, messages, and files.</p>
+                      <button
+                        onClick={handleDeleteWorkspace}
+                        style={{ padding: '10px 16px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', width: '100%' }}
+                      >Delete Workspace</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {settingsTab === 'audit' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: '700' }}>Audit Log</h4>
+                  {(!workspaceDetails?.auditLogs || workspaceDetails.auditLogs.length === 0) ? (
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>No audit logs available.</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {workspaceDetails.auditLogs.slice().reverse().map((log, index) => (
+                        <div key={index} style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--glass-border)', fontSize: '0.85rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: '700', color: 'var(--primary-color)' }}>{log.action}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{new Date(log.createdAt).toLocaleString()}</span>
+                          </div>
+                          <p style={{ color: 'var(--text-primary)' }}>{log.details}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

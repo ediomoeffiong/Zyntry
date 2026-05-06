@@ -136,6 +136,8 @@ const Profile = () => {
     }
   };
 
+  const isMobile = window.innerWidth <= 768;
+
   if (isLoading && !profile.username) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: 'var(--bg-dark)', color: 'white' }}>
@@ -145,8 +147,8 @@ const Profile = () => {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-dark)', color: 'var(--text-primary)', padding: '40px 20px' }}>
-      <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: 'var(--bg-card)', borderRadius: '24px', border: '1px solid var(--glass-border)', boxShadow: 'var(--shadow-premium)', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-dark)', color: 'var(--text-primary)', padding: isMobile ? '20px 16px' : '40px 20px' }}>
+      <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: 'var(--bg-card)', borderRadius: '24px', border: '1px solid var(--glass-border)', boxShadow: 'var(--shadow-premium)', overflow: 'hidden', width: '100%' }}>
         
         {/* Header/Back Button */}
         <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -206,7 +208,7 @@ const Profile = () => {
                 )}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', textAlign: 'left', marginBottom: '40px' }}>
+              <div className="profile-grid">
                 <div className="profile-info-item">
                   <span className="label">Email</span>
                   <span className="value">{profile.email}</span>
@@ -267,7 +269,7 @@ const Profile = () => {
                   <label>Bio (Max 200 chars)</label>
                   <textarea name="description" value={profile.description} onChange={handleChange} maxLength="200" rows="3" placeholder="Tell us about yourself..." />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="profile-grid" style={{ gap: '20px', marginBottom: '20px' }}>
                   <div className="form-group">
                     <label>Location</label>
                     <input type="text" name="location" value={profile.location} onChange={handleChange} placeholder="San Francisco, CA" />
@@ -277,7 +279,7 @@ const Profile = () => {
                     <input type="text" name="timezone" value={profile.timezone} onChange={handleChange} placeholder="GMT-7" />
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="profile-grid" style={{ gap: '20px', marginBottom: '20px' }}>
                   <div className="form-group">
                     <label>Company</label>
                     <input type="text" name="company" value={profile.company} onChange={handleChange} placeholder="Zyntry Inc." />
@@ -369,6 +371,21 @@ const Profile = () => {
       </div>
 
       <style>{`
+        .profile-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: 16px;
+          text-align: left;
+          margin-bottom: 40px;
+        }
+        @media (max-width: 768px) {
+          .profile-grid {
+            grid-template-columns: 1fr;
+          }
+          .profile-info-item[style*="grid-column: span 2"] {
+            grid-column: span 1 !important;
+          }
+        }
         .profile-info-item {
           display: flex;
           flex-direction: column;

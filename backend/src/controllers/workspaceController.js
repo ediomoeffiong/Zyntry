@@ -171,6 +171,15 @@ const approveRequest = async (req, res) => {
       (id) => id.toString() !== userId
     );
     workspace.members.push({ user: userId, role: 'member' });
+    
+    // Add audit log
+    workspace.auditLogs.push({
+      action: 'MEMBER_APPROVED',
+      performedBy: req.user.id,
+      targetUser: userId,
+      details: 'Approved join request'
+    });
+    
     await workspace.save();
 
     // Add workspace to user
@@ -227,6 +236,15 @@ const rejectRequest = async (req, res) => {
     workspace.pendingRequests = workspace.pendingRequests.filter(
       (id) => id.toString() !== userId
     );
+    
+    // Add audit log
+    workspace.auditLogs.push({
+      action: 'MEMBER_REJECTED',
+      performedBy: req.user.id,
+      targetUser: userId,
+      details: 'Rejected join request'
+    });
+    
     await workspace.save();
 
     // Trigger notification
@@ -271,14 +289,35 @@ const acceptInvite = async (req, res) => {
     // Update invite status
     workspace.invites[inviteIndex].status = 'accepted';
     
-    // Move to pendingRequests (NOT auto-join as per requirement)
-    if (!workspace.pendingRequests.includes(req.user.id)) {
-      workspace.pendingRequests.push(req.user.id);
+    // Auto-join because this was an explicit invitation
+    if (!workspace.members.some(m => m.user.toString() === req.user.id)) {
+      workspace.members.push({ user: req.user.id, role: 'member' });
+      
+      // Add workspace to user
+      await User.findByIdAndUpdate(req.user.id, {
+        $push: { workspaces: workspace._id },
+      });
+      
+      // Add to general channel
+      const Channel = require('../models/Channel');
+      const generalChannel = await Channel.findOne({
+        workspaceId: workspace._id,
+        name: 'general',
+      });
+      if (generalChannel && !generalChannel.members.includes(req.user.id)) {
+        generalChannel.members.push(req.user.id);
+        await generalChannel.save();
+      }
     }
+    
+    // Remove from pending if they were there
+    workspace.pendingRequests = workspace.pendingRequests.filter(
+      (id) => id.toString() !== req.user.id
+    );
     
     await workspace.save();
 
-    res.json({ message: 'Invite accepted. Waiting for owner approval.', workspace });
+    res.json({ message: 'Invite accepted. You have joined the workspace.', workspace });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -345,7 +384,15 @@ const getUserWorkspaces = async (req, res) => {
 // @access  Private
 const getAllWorkspaces = async (req, res) => {
   try {
-    const workspaces = await Workspace.find({ 'members.user': { $ne: req.user.id } });
+    const userDomain = req.user.email.split('@')[1].toLowerCase();
+    const workspaces = await Workspace.find({ 
+      'members.user': { $ne: req.user.id },
+      $or: [
+        { 'settings.allowedDomain': { $exists: false } },
+        { 'settings.allowedDomain': '' },
+        { 'settings.allowedDomain': userDomain }
+      ]
+    });
     res.json(workspaces);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -502,6 +549,15 @@ const updateUserRole = async (req, res) => {
     }
 
     targetMember.role = role;
+    
+    // Add audit log
+    workspace.auditLogs.push({
+      action: 'ROLE_UPDATED',
+      performedBy: req.user.id,
+      targetUser: req.params.userId,
+      details: `Changed role to ${role}`
+    });
+    
     await workspace.save();
 
     res.json({ message: 'Role updated successfully', workspace });
@@ -538,6 +594,15 @@ const removeUser = async (req, res) => {
     }
 
     workspace.members = workspace.members.filter(m => m.user.toString() !== req.params.userId);
+    
+    // Add audit log
+    workspace.auditLogs.push({
+      action: 'MEMBER_REMOVED',
+      performedBy: req.user.id,
+      targetUser: req.params.userId,
+      details: 'Removed member from workspace'
+    });
+    
     await workspace.save();
 
     // Remove workspace from user's workspaces list
@@ -560,12 +625,35 @@ const updateSettings = async (req, res) => {
     if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
 
     const requesterMember = workspace.members.find(m => m.user.toString() === req.user.id);
-    if (!requesterMember || requesterMember.role !== 'owner') {
-      return res.status(403).json({ message: 'Only owners can update settings' });
+    if (!requesterMember || !['owner', 'admin'].includes(requesterMember.role)) {
+      return res.status(403).json({ message: 'Only owners and admins can update settings' });
+    }
+
+    let details = [];
+
+    if (req.body.slug) {
+      const newSlug = req.body.slug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      if (newSlug !== workspace.slug) {
+        const slugExists = await Workspace.findOne({ slug: newSlug });
+        if (slugExists) {
+          return res.status(400).json({ message: 'Workspace URL (slug) is already taken' });
+        }
+        workspace.slug = newSlug;
+        details.push(`Changed slug to ${newSlug}`);
+      }
     }
 
     if (req.body.settings) {
       workspace.settings = { ...workspace.settings, ...req.body.settings };
+      details.push('Updated workspace settings');
+    }
+
+    if (details.length > 0) {
+      workspace.auditLogs.push({
+        action: 'SETTINGS_UPDATED',
+        performedBy: req.user.id,
+        details: details.join(', ')
+      });
       await workspace.save();
     }
 

@@ -12,6 +12,10 @@
   --glass-border: rgba(255, 255, 255, 0.1);
   --shadow-premium: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Breakpoints */
+  --mobile: 768px;
+  --tablet: 1024px;
 }
 
 * {
@@ -127,6 +131,224 @@ h1, h2, h3, h4 {
     background: rgba(0,0,0,0.5);
     z-index: 999;
   }
+
+  .hidden-mobile {
+    display: none !important;
+  }
+
+  .full-width-mobile {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .show-mobile {
+    display: none !important;
+  }
+}
+
+/* Global Responsive Fixes */
+img, video {
+  max-width: 100%;
+  height: auto;
+}
+
+input, textarea, button {
+  font-family: inherit;
+}
+
+/* Dashboard Layout */
+.dashboard-container {
+  display: flex;
+  height: 100vh;
+  min-height: 100vh;
+  height: 100dvh;
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  overflow: hidden;
+  position: relative;
+}
+
+.workspace-rail {
+  width: 72px;
+  background-color: var(--bg-dark);
+  border-right: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 0;
+  gap: 12px;
+  z-index: 1002;
+  flex-shrink: 0;
+}
+
+.mobile-sidebar {
+  width: 300px;
+  min-width: 300px;
+  background-color: var(--bg-card);
+  border-right: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  transition: var(--transition);
+  overflow: hidden;
+  position: relative;
+  z-index: 1001;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-width: 0;
+  background-color: var(--bg-dark);
+}
+
+.chat-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  z-index: 10;
+}
+
+.message-list {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.message-input-area {
+  padding: 20px 24px;
+  background-color: var(--bg-dark);
+}
+
+.info-sidebar {
+  width: 320px;
+  min-width: 320px;
+  border-left: 1px solid var(--glass-border);
+  background-color: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mobile Specific Overrides */
+@media (max-width: 768px) {
+  .workspace-rail {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    transition: var(--transition);
+    z-index: 1006; /* Above sidebar */
+  }
+
+  .workspace-rail.open {
+    transform: translateX(0);
+  }
+
+  .mobile-sidebar {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1005;
+    transform: translateX(-100%);
+    width: 280px;
+    min-width: 280px;
+    box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+  }
+
+  .mobile-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .chat-header {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .message-list {
+    padding: 16px;
+  }
+
+  .message-input-area {
+    padding: 12px 16px;
+  }
+
+  .info-sidebar {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    z-index: 1010;
+    transform: translateX(100%);
+    transition: var(--transition);
+  }
+
+  .info-sidebar.open {
+    transform: translateX(0);
+  }
+}
+
+/* Modal System */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0,0,0,0.8);
+  backdrop-filter: blur(8px);
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 500px;
+  background-color: var(--bg-card);
+  border-radius: 20px;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-premium);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: modalScaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modalScaleUp {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end; /* Slide up from bottom on mobile */
+  }
+
+  .modal-content {
+    max-width: 100%;
+    border-radius: 24px 24px 0 0;
+    max-height: 95vh;
+    animation: modalSlideUp 0.3s ease-out;
+  }
+}
+
+@keyframes modalSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 
 /* Modal Backdrop */
