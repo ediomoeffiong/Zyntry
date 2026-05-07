@@ -111,7 +111,7 @@ const Dashboard = () => {
   const [accountInfo, setAccountInfo] = useState(null); // { status, deletionDate, type }
 
   const getApiUrl = () => (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://localhost:5000/api' 
+    ? 'http://localhost:5000/api'
     : 'https://zyntry.onrender.com/api';
   const apiBaseUrl = getApiUrl();
   const socketRef = useRef(null);
@@ -455,7 +455,7 @@ const Dashboard = () => {
       setWorkspaceDetails(res.data);
       setEditSlug(res.data.slug || '');
       setEditDomain(res.data.settings?.allowedDomain || '');
-      
+
       // Extract user preferences
       const myMemberInfo = res.data.members.find(m => m._id === user?.id);
       if (myMemberInfo) {
@@ -477,7 +477,7 @@ const Dashboard = () => {
       if (res.data.notificationSettings) {
         setNotificationSettings(res.data.notificationSettings);
       }
-      
+
       // Check Account Status
       if (res.data.accountStatus && res.data.accountStatus !== 'active') {
         setAccountInfo({
@@ -590,7 +590,7 @@ const Dashboard = () => {
       });
       setNotifications(prev => prev.map(notif => notif._id === n._id ? { ...notif, isRead: true } : notif));
       setUnreadCount(prev => Math.max(0, prev - 1));
-      
+
       // Navigate based on type
       if (n.type === 'DIRECT_MESSAGE') {
         if (n.metadata?.channelId) {
@@ -631,7 +631,7 @@ const Dashboard = () => {
   const togglePin = async (channelId) => {
     try {
       const res = await axios.patch(`${apiBaseUrl}/channels/${channelId}/pin`, {}, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'x-workspace-id': activeWorkspace
         }
@@ -667,13 +667,13 @@ const Dashboard = () => {
     newOrder.splice(targetIndex, 0, sourceChannelId);
 
     setChannelOrder(newOrder);
-    
+
     try {
       await axios.patch(`${apiBaseUrl}/channels/reorder`, {
         workspaceId: activeWorkspace,
         channelOrder: newOrder
       }, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'x-workspace-id': activeWorkspace
         }
@@ -694,14 +694,14 @@ const Dashboard = () => {
       const bPinned = pinnedChannels.includes(b._id);
       if (aPinned && !bPinned) return -1;
       if (!aPinned && bPinned) return 1;
-      
+
       const aIndex = channelOrder.indexOf(a._id);
       const bIndex = channelOrder.indexOf(b._id);
-      
+
       if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
       if (aIndex !== -1) return -1;
       if (bIndex !== -1) return 1;
-      
+
       // Both are unordered: sort by createdAt ascending (newest at bottom)
       const dateA = new Date(a.createdAt || a.updatedAt || 0);
       const dateB = new Date(b.createdAt || b.updatedAt || 0);
@@ -797,8 +797,8 @@ const Dashboard = () => {
     setGenericConfirm({
       isOpen: true,
       title: isBlocked ? 'Unblock User' : 'Block User',
-      message: isBlocked 
-        ? `Are you sure you want to unblock ${targetUser.username}?` 
+      message: isBlocked
+        ? `Are you sure you want to unblock ${targetUser.username}?`
         : `Are you sure you want to block ${targetUser.username}? You will no longer see their messages.`,
       confirmText: isBlocked ? 'Unblock' : 'Block User',
       cancelText: 'Cancel',
@@ -900,7 +900,7 @@ const Dashboard = () => {
       setNewChannelDescription('');
       setIsCreatingChannel(false);
       await fetchChannels();
-      
+
       if (res.status === 202) {
         setSuccess('Channel creation request sent for approval!');
       } else if (res.data?._id) {
@@ -931,12 +931,12 @@ const Dashboard = () => {
   const handleJoinPublicChannel = async (channelId) => {
     try {
       const res = await axios.post(`${apiBaseUrl}/channels/${channelId}/join`, {}, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'x-workspace-id': activeWorkspace
         }
       });
-      
+
       if (res.status === 202) {
         setSuccess('Join request sent! Waiting for approval.');
         fetchMyPendingRequests();
@@ -1374,15 +1374,15 @@ const Dashboard = () => {
       setError('Password is required to leave the workspace');
       return;
     }
-    
+
     try {
       await axios.post(`${apiBaseUrl}/workspaces/${activeWorkspace}/leave`, { password: leavePassword }, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
-          'x-workspace-id': activeWorkspace 
+          'x-workspace-id': activeWorkspace
         }
       });
-      
+
       setIsLeavingWorkspace(false);
       setLeavePassword('');
       setActiveWorkspace(null);
@@ -1403,7 +1403,7 @@ const Dashboard = () => {
       onConfirm: async () => {
         try {
           await axios.post(`${getApiUrl()}/channels/${channelId}/leave`, {}, {
-            headers: { 
+            headers: {
               Authorization: `Bearer ${token}`,
               'x-workspace-id': activeWorkspace
             }
@@ -1580,7 +1580,7 @@ const Dashboard = () => {
                       >
                         <div style={{ display: 'flex', gap: '12px' }}>
                           <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                            <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" /></svg>
                           </div>
                           <div>
                             <p style={{ fontSize: '0.85rem', fontWeight: '700', marginBottom: '2px' }}>{n.title}</p>
@@ -1601,10 +1601,10 @@ const Dashboard = () => {
       {/* Sidebar */}
       {activeWorkspace && (
         <div className={`mobile-sidebar ${isSidebarOpen ? 'open' : 'sidebar-closed'}`} style={{ left: isMobile ? (isSidebarOpen ? '72px' : '-300px') : '0' }}>
-          <div style={{ padding: `calc(24px + env(safe-area-inset-top, 0px)) 24px 24px 24px`, borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h2 
+                <h2
                   onClick={() => navigate('/')}
                   style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--primary-color)', marginBottom: '2px', cursor: 'pointer' }}
                 >Zyntry</h2>
@@ -1767,7 +1767,7 @@ const Dashboard = () => {
                               style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', opacity: 0.8 }}
                               title="Unpin channel"
                             >
-                              <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M16 9V4l1 0c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1l1 0v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg>
+                              <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M16 9V4l1 0c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1l1 0v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z" /></svg>
                             </button>
                           </div>
                         </li>
@@ -2090,158 +2090,6 @@ const Dashboard = () => {
             </div>
           </div>
         ) : (
-          selectedChannel ? (
-            <>
-              <header className="chat-header">
-                <button
-                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                  style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-                </button>
-
-                <div className="hidden-mobile" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div
-                    onClick={() => setIsSearching(true)}
-                    style={{
-                      width: '100%',
-                      maxWidth: '400px',
-                      backgroundColor: 'rgba(255,255,255,0.05)',
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--glass-border)',
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.85rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      transition: 'var(--transition)'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
-                  >
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                    <span>Search {workspaceDetails?.name || 'Workspace'}...</span>
-                    <span style={{ marginLeft: 'auto', fontSize: '0.7rem', opacity: 0.5, border: '1px solid var(--glass-border)', padding: '2px 6px', borderRadius: '4px' }}>Ctrl + G</span>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <h2 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-primary)' }}>
-                    {activeChannelObj?.isDirectMessage ? '@' : '#'} {getChannelDisplayName(activeChannelObj)}
-                  </h2>
-                  {activeChannelObj?.isDirectMessage && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: activeChannelObj.participants?.find(p => p._id !== user.id)?.status === 'online' ? '#10b981' : 'transparent',
-                        boxShadow: activeChannelObj.participants?.find(p => p._id !== user.id)?.status === 'away' ? 'inset 0 0 0 1.5px var(--text-secondary)' : 'none'
-                      }}></div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        {activeChannelObj.participants?.find(p => p._id !== user.id)?.status || 'offline'}
-                      </span>
-                      {activeChannelObj.participants?.find(p => p._id !== user.id)?.customStatus?.text && (
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: '4px', opacity: 0.8 }}>
-                          | {activeChannelObj.participants.find(p => p._id !== user.id).customStatus.emoji} {activeChannelObj.participants.find(p => p._id !== user.id).customStatus.text}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ position: 'relative' }}>
-                  </div>
-
-                  <div
-                    onClick={() => setIsInfoSidebarOpen(!isInfoSidebarOpen)}
-                    style={{ background: 'transparent', border: 'none', color: isInfoSidebarOpen ? 'var(--primary-color)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '4px' }}
-                    title="Show Info"
-                  >
-                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  </div>
-                </div>
-              </header>
-
-              <div className="message-list">
-                {isLoadingMessages ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <div className="spinner" style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--primary-color)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                      Loading messages...
-                    </div>
-                  </div>
-                ) : messages.length === 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 20px', textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.01)', borderRadius: '24px', margin: '20px 0', border: '1px solid var(--glass-border)', flexShrink: 0 }}>
-                    <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-                      <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A10.003 10.003 0 0012 3a10.003 10.003 0 00-6.237 2.152l-.053.09m15.357 10.28l-.054.09A10.003 10.003 0 0112 21a10.003 10.003 0 01-6.237-2.152l-.053-.09L12 11z" /></svg>
-                    </div>
-                    <h3 style={{ fontSize: '1.2rem', fontWeight: '400', fontStyle: 'italic', color: 'var(--text-primary)', maxWidth: '450px', lineHeight: '1.8', marginBottom: '16px', fontFamily: '"Outfit", sans-serif' }}>
-                      &ldquo;The people who are crazy enough to think they can change the world are the ones who do.&rdquo;
-                    </h3>
-                    <div style={{ width: '40px', height: '2px', backgroundColor: 'var(--primary-color)', margin: '16px 0' }}></div>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Steve Jobs</p>
-                  </div>
-                ) : (
-                  messages.map((msg, index) => {
-                    const isOwn = msg.sender?._id === user?.id;
-                    const prevMsg = messages[index - 1];
-                    const showHeader = !prevMsg || prevMsg.sender?._id !== msg.sender?._id;
-
-                    return (
-                      <div key={msg._id} style={{
-                        display: 'flex',
-                        flexDirection: 'row',
-                        alignItems: 'flex-start',
-                        gap: '12px',
-                        marginTop: showHeader ? '16px' : '2px',
-                        paddingLeft: isOwn ? '0' : '0',
-                        paddingRight: isOwn ? '0' : '0',
-                        justifyContent: isOwn ? 'flex-end' : 'flex-start'
-                      }}>
-                        {!isOwn && showHeader && (
-                          <div
-                            onClick={() => handleViewProfile(msg.sender?._id)}
-                            style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', flexShrink: 0, overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: 'white', fontSize: '0.8rem', transition: 'var(--transition)' }}
-                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                          >
-                            {msg.sender?.profilePicture ? (
-                              <img src={msg.sender.profilePicture} alt={msg.sender.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : (
-                              msg.sender?.username?.[0]?.toUpperCase()
-                            )}
-                          </div>
-                        )}
-                        {!isOwn && !showHeader && <div style={{ width: '36px', flexShrink: 0 }} />}
-
-                        <div style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: isOwn ? 'flex-end' : 'flex-start',
-                          maxWidth: isMobile ? '90%' : '75%'
-                        }}>
-                          {showHeader && (
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px', padding: '0 4px' }}>
-                              <span
-                                onClick={() => !isOwn && handleViewProfile(msg.sender?._id)}
-                                style={{ fontSize: '0.8rem', fontWeight: '700', color: isOwn ? 'var(--primary-color)' : 'var(--text-primary)', cursor: isOwn ? 'default' : 'pointer' }}
-                              >
-                                {isOwn ? 'You' : msg.sender?.username}
-                              </span>
-                              <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', opacity: 0.6 }}>
-                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
-                          )}
-                          <div style={{
-                            padding: '10px 16px',
-                            borderRadius: '12px',
-                            borderTopRightRadius: isOwn && showHeader ? '2px' : '12px',
-                            borderTopLeftRadius: !isOwn && showHeader ? '2px' : '12px',
-                            backgroundColor: isOwn ? 'var(--primary-color)' : 'var(--bg-card)',
                             color: isOwn ? 'white' : 'var(--text-primary)',
                             fontSize: '0.95rem',
                             lineHeight: '1.4',
@@ -2400,13 +2248,13 @@ const Dashboard = () => {
                       </button>
                     </div>
                     <div style={{ display: 'flex', padding: '0 20px' }}>
-                      <button 
+                      <button
                         onClick={() => setInfoTab('members')}
                         style={{ padding: '12px 16px', fontSize: '0.85rem', fontWeight: '700', border: 'none', background: 'transparent', color: infoTab === 'members' ? 'var(--primary-color)' : 'var(--text-secondary)', borderBottom: infoTab === 'members' ? '2px solid var(--primary-color)' : '2px solid transparent', cursor: 'pointer', transition: 'var(--transition)' }}
                       >
                         {activeChannelObj?.isDirectMessage ? 'Profile' : 'Members'}
                       </button>
-                      <button 
+                      <button
                         onClick={() => setInfoTab('settings')}
                         style={{ padding: '12px 16px', fontSize: '0.85rem', fontWeight: '700', border: 'none', background: 'transparent', color: infoTab === 'settings' ? 'var(--primary-color)' : 'var(--text-secondary)', borderBottom: infoTab === 'settings' ? '2px solid var(--primary-color)' : '2px solid transparent', cursor: 'pointer', transition: 'var(--transition)' }}
                       >
@@ -2440,297 +2288,297 @@ const Dashboard = () => {
                           </div>
                         </div>
 
-                    {activeChannelObj?.isDirectMessage ? (
-                      /* DM Info */
-                      <div>
-                        <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Conversation Partner</h4>
-                        {(() => {
-                          const otherUser = activeChannelObj.participants.find(p => p._id !== user.id);
-                          if (!otherUser) return null;
-                          return (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                              <div
-                                onClick={() => handleViewProfile(otherUser._id)}
-                                style={{ width: '80px', height: '80px', borderRadius: '24px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: '700', color: 'white', marginBottom: '16px', cursor: 'pointer', boxShadow: '0 8px 16px rgba(16, 185, 129, 0.2)' }}
-                              >
-                                {otherUser.profilePicture ? (
-                                  <img src={otherUser.profilePicture} style={{ width: '100%', height: '100%', borderRadius: '24px', objectFit: 'cover' }} alt={otherUser.username || 'User'} />
-                                ) : (otherUser.username ? otherUser.username[0].toUpperCase() : '?')}
-                              </div>
-                              <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '4px' }}>{otherUser.fullName || otherUser.username || 'Unknown User'}</h3>
-                              <p style={{ fontSize: '0.85rem', color: 'var(--primary-color)', fontWeight: '600', marginBottom: '12px' }}>{otherUser.title || 'Team Member'}</p>
-
-                              <div style={{ width: '100%', textAlign: 'left', backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-                                <div style={{ marginBottom: '12px' }}>
-                                  <label style={{ display: 'block', fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '4px' }}>Email</label>
-                                  <div style={{ fontSize: '0.85rem' }}>{otherUser.email}</div>
-                                </div>
-                                {otherUser.description && (
-                                  <div style={{ marginBottom: '12px' }}>
-                                    <label style={{ display: 'block', fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '4px' }}>Bio</label>
-                                    <div style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>{otherUser.description}</div>
-                                  </div>
-                                )}
-                                <button
-                                  onClick={() => handleViewProfile(otherUser._id)}
-                                  style={{ width: '100%', padding: '10px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', marginTop: '8px', transition: 'var(--transition)' }}
-                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
-                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-color)'}
-                                >Profile</button>
-                              </div>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    ) : (
-                      /* Channel Info */
-                      <div>
-                        <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Channel Info</h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                          <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-                            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '8px' }}># {activeChannelObj?.name}</h3>
-                            {activeChannelObj?.description && (
-                              <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.5', marginBottom: '16px' }}>{activeChannelObj.description}</p>
-                            )}
-                            <div style={{ display: 'grid', gap: '8px', paddingTop: '12px', borderTop: '1px solid var(--glass-border)' }}>
-                              <div style={{ fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>Created by</span>
-                                <span style={{ fontWeight: '600' }}>{activeChannelObj?.createdBy?.username || 'Unknown'}</span>
-                              </div>
-                              <div style={{ fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>Created on</span>
-                                <span style={{ fontWeight: '600' }}>{new Date(activeChannelObj?.createdAt).toLocaleDateString()}</span>
-                              </div>
-                            </div>
-                          </div>
-
+                        {activeChannelObj?.isDirectMessage ? (
+                          /* DM Info */
                           <div>
-                            <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '12px' }}>Members ({activeChannelObj?.members?.length || 0})</h4>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                              {activeChannelObj?.members?.map(member => {
-                                const isUserAdmin = ['owner', 'admin'].includes(workspaceDetails?.members?.find(m => m._id === user?.id)?.role);
-                                const isUserModerator = activeChannelObj?.moderators?.includes(user?.id);
-                                const isTargetModerator = activeChannelObj?.moderators?.includes(member._id);
-                                const canManage = (isUserAdmin || isUserModerator) && member._id !== user?.id;
-
-                                return (
-                                  <div key={member._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '12px', transition: 'var(--transition)', backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                                    <div style={{ position: 'relative' }}>
-                                      <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '700', color: 'white' }}>
-                                        {member.profilePicture ? <img src={member.profilePicture} style={{ width: '100%', height: '100%', borderRadius: '10px', objectFit: 'cover' }} alt={member.username || 'User'} /> : (member.username ? member.username[0].toUpperCase() : '?')}
-                                      </div>
-                                      <div style={{
-                                        position: 'absolute',
-                                        bottom: '-2px',
-                                        right: '-2px',
-                                        width: '12px',
-                                        height: '12px',
-                                        borderRadius: '50%',
-                                        border: '2px solid var(--bg-card)',
-                                        backgroundColor: member.status === 'online' ? '#10b981' : 'transparent',
-                                        boxShadow: member.status === 'away' ? 'inset 0 0 0 2px var(--text-secondary)' : 'none'
-                                      }}></div>
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                        <span 
-                                          onClick={() => handleViewProfile(member._id)}
-                                          style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
-                                        >
-                                          {member.username}
-                                        </span>
-                                        {isTargetModerator && (
-                                          <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--primary-color)', textTransform: 'uppercase', fontWeight: '800' }}>
-                                            MOD
-                                          </span>
-                                        )}
-                                      </div>
-                                      {(() => {
-                                        const meta = activeChannelObj.memberMetadata?.find(m => (m.user?._id || m.user) === member._id);
-                                        if (meta?.expiryDate) {
-                                          const isExpired = new Date(meta.expiryDate) < new Date();
-                                          return (
-                                            <span style={{ fontSize: '0.65rem', color: isExpired ? '#ef4444' : 'var(--text-secondary)', fontWeight: '600' }}>
-                                              {isExpired ? 'Expired' : `Expires: ${new Date(meta.expiryDate).toLocaleDateString()}`}
-                                            </span>
-                                          );
-                                        }
-                                        return <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{member.title || 'Member'}</span>;
-                                      })()}
-                                    </div>
-                                    
-                                    {canManage && (
-                                      <div style={{ display: 'flex', gap: '4px' }}>
-                                        {isUserAdmin && (
-                                          <button 
-                                            onClick={(e) => { e.stopPropagation(); handleToggleModerator(activeChannelObj._id, member._id); }}
-                                            title={isTargetModerator ? "Revoke Mod" : "Make Mod"}
-                                            style={{ background: 'transparent', border: 'none', color: isTargetModerator ? 'var(--primary-color)' : 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
-                                          >
-                                            <svg width="14" height="14" fill={isTargetModerator ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                                          </button>
-                                        )}
-                                        <button 
-                                          onClick={(e) => { 
-                                            e.stopPropagation(); 
-                                            setGenericConfirm({
-                                              isOpen: true,
-                                              title: 'Set Expiry Date',
-                                              message: 'Enter expiry date for this member (or leave empty to clear):',
-                                              showInput: true,
-                                              inputType: 'date',
-                                              inputValue: '',
-                                              confirmText: 'Set Expiry',
-                                              onConfirm: (date) => handleSetMemberExpiry(activeChannelObj._id, member._id, date || null)
-                                            });
-                                          }}
-                                          title="Set Expiry"
-                                          style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
-                                        >
-                                          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                        </button>
-                                        <button 
-                                          onClick={(e) => { 
-                                            e.stopPropagation(); 
-                                            setGenericConfirm({
-                                              isOpen: true,
-                                              title: 'Remove Member',
-                                              message: 'Are you sure you want to remove this user from the channel?',
-                                              confirmText: 'Remove',
-                                              isDanger: true,
-                                              onConfirm: () => handleRemoveChannelMember(activeChannelObj._id, member._id)
-                                            });
-                                          }}
-                                          title="Remove User"
-                                          style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
-                                        >
-                                          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                        </button>
-                                      </div>
-                                    )}
+                            <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Conversation Partner</h4>
+                            {(() => {
+                              const otherUser = activeChannelObj.participants.find(p => p._id !== user.id);
+                              if (!otherUser) return null;
+                              return (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                                  <div
+                                    onClick={() => handleViewProfile(otherUser._id)}
+                                    style={{ width: '80px', height: '80px', borderRadius: '24px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: '700', color: 'white', marginBottom: '16px', cursor: 'pointer', boxShadow: '0 8px 16px rgba(16, 185, 129, 0.2)' }}
+                                  >
+                                    {otherUser.profilePicture ? (
+                                      <img src={otherUser.profilePicture} style={{ width: '100%', height: '100%', borderRadius: '24px', objectFit: 'cover' }} alt={otherUser.username || 'User'} />
+                                    ) : (otherUser.username ? otherUser.username[0].toUpperCase() : '?')}
                                   </div>
-                                );
-                              })}
-                            </div>
+                                  <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '4px' }}>{otherUser.fullName || otherUser.username || 'Unknown User'}</h3>
+                                  <p style={{ fontSize: '0.85rem', color: 'var(--primary-color)', fontWeight: '600', marginBottom: '12px' }}>{otherUser.title || 'Team Member'}</p>
 
-                            {/* Individual Channel Settings */}
-                            <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--glass-border)' }}>
-                              <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Conversation Settings</h4>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                <button
-                                  onClick={() => { setChannelToLeave(activeChannelObj._id); setIsConfirmingLeave(true); }}
-                                  style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                                >
-                                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                                  {activeChannelObj?.isDirectMessage ? 'Close DM' : 'Leave Channel'}
-                                </button>
-                                <button
-                                  onClick={() => handleToggleMute(activeChannelObj._id)}
-                                  style={{ 
-                                    width: '100%', 
-                                    padding: '10px', 
-                                    backgroundColor: mutedChannels.includes(activeChannelObj._id) ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.05)', 
-                                    color: mutedChannels.includes(activeChannelObj._id) ? 'var(--primary-color)' : 'var(--text-primary)', 
-                                    border: '1px solid ' + (mutedChannels.includes(activeChannelObj._id) ? 'rgba(16, 185, 129, 0.2)' : 'var(--glass-border)'), 
-                                    borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' 
-                                  }}
-                                >
-                                  {mutedChannels.includes(activeChannelObj._id) ? (
-                                    <>
-                                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                                      Unmute Notifications
-                                    </>
-                                  ) : (
-                                    <>
-                                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-                                      Mute Notifications
-                                    </>
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                          /* Settings Tab Content */
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            <div>
-                              <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Conversation Settings</h4>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {(activeChannelObj?.isDirectMessage) ? (
-                                  <>
-                                    <button 
-                                      onClick={() => handleClearHistory(activeChannelObj._id)}
-                                      style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px' }}
-                                    >
-                                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                      Clear Message History
-                                    </button>
-                                    <button 
-                                      onClick={() => handleToggleBlock(activeChannelObj.participants.find(p => p._id !== user.id))}
-                                      style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', color: user.blockedUsers?.includes(activeChannelObj.participants.find(p => p._id !== user.id)?._id) ? 'var(--primary-color)' : '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px' }}
-                                    >
-                                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
-                                      {user.blockedUsers?.includes(activeChannelObj.participants.find(p => p._id !== user.id)?._id) ? 'Unblock User' : 'Block User'}
-                                    </button>
-                                  </>
-                                ) : (
-                                  /* Channel Management (Admins & Moderators) */
-                                  <>
-                                    {(workspaceDetails?.createdBy === (user?.id || user?._id) || activeChannelObj?.moderators?.some(m => (m._id || m) === (user?.id || user?._id))) && (
-                                      <>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                          <label style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Channel Name</label>
-                                          <input 
-                                            type="text" 
-                                            value={editChannelName}
-                                            onChange={(e) => setEditChannelName(e.target.value)}
-                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none', fontSize: '0.9rem' }}
-                                          />
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                          <label style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Description</label>
-                                          <textarea 
-                                            value={editChannelDescription}
-                                            onChange={(e) => setEditChannelDescription(e.target.value)}
-                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none', fontSize: '0.9rem', minHeight: '80px', resize: 'vertical' }}
-                                          />
-                                        </div>
-                                        <button 
-                                          onClick={() => handleUpdateChannel(activeChannelObj._id)}
-                                          style={{ width: '100%', padding: '10px', background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem' }}
-                                        >
-                                          Update Channel
-                                        </button>
-                                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--glass-border)' }}>
-                                          <h5 style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: '700', marginBottom: '12px' }}>Danger Zone</h5>
-                                          <button 
-                                            style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                                          >
-                                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                            Archive Channel
-                                          </button>
-                                        </div>
-                                      </>
+                                  <div style={{ width: '100%', textAlign: 'left', backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                                    <div style={{ marginBottom: '12px' }}>
+                                      <label style={{ display: 'block', fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '4px' }}>Email</label>
+                                      <div style={{ fontSize: '0.85rem' }}>{otherUser.email}</div>
+                                    </div>
+                                    {otherUser.description && (
+                                      <div style={{ marginBottom: '12px' }}>
+                                        <label style={{ display: 'block', fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '4px' }}>Bio</label>
+                                        <div style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>{otherUser.description}</div>
+                                      </div>
                                     )}
+                                    <button
+                                      onClick={() => handleViewProfile(otherUser._id)}
+                                      style={{ width: '100%', padding: '10px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', marginTop: '8px', transition: 'var(--transition)' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-color)'}
+                                    >Profile</button>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        ) : (
+                          /* Channel Info */
+                          <div>
+                            <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Channel Info</h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                              <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                                <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '8px' }}># {activeChannelObj?.name}</h3>
+                                {activeChannelObj?.description && (
+                                  <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.5', marginBottom: '16px' }}>{activeChannelObj.description}</p>
+                                )}
+                                <div style={{ display: 'grid', gap: '8px', paddingTop: '12px', borderTop: '1px solid var(--glass-border)' }}>
+                                  <div style={{ fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Created by</span>
+                                    <span style={{ fontWeight: '600' }}>{activeChannelObj?.createdBy?.username || 'Unknown'}</span>
+                                  </div>
+                                  <div style={{ fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Created on</span>
+                                    <span style={{ fontWeight: '600' }}>{new Date(activeChannelObj?.createdAt).toLocaleDateString()}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div>
+                                <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '12px' }}>Members ({activeChannelObj?.members?.length || 0})</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  {activeChannelObj?.members?.map(member => {
+                                    const isUserAdmin = ['owner', 'admin'].includes(workspaceDetails?.members?.find(m => m._id === user?.id)?.role);
+                                    const isUserModerator = activeChannelObj?.moderators?.includes(user?.id);
+                                    const isTargetModerator = activeChannelObj?.moderators?.includes(member._id);
+                                    const canManage = (isUserAdmin || isUserModerator) && member._id !== user?.id;
+
+                                    return (
+                                      <div key={member._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '12px', transition: 'var(--transition)', backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                                        <div style={{ position: 'relative' }}>
+                                          <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '700', color: 'white' }}>
+                                            {member.profilePicture ? <img src={member.profilePicture} style={{ width: '100%', height: '100%', borderRadius: '10px', objectFit: 'cover' }} alt={member.username || 'User'} /> : (member.username ? member.username[0].toUpperCase() : '?')}
+                                          </div>
+                                          <div style={{
+                                            position: 'absolute',
+                                            bottom: '-2px',
+                                            right: '-2px',
+                                            width: '12px',
+                                            height: '12px',
+                                            borderRadius: '50%',
+                                            border: '2px solid var(--bg-card)',
+                                            backgroundColor: member.status === 'online' ? '#10b981' : 'transparent',
+                                            boxShadow: member.status === 'away' ? 'inset 0 0 0 2px var(--text-secondary)' : 'none'
+                                          }}></div>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                            <span
+                                              onClick={() => handleViewProfile(member._id)}
+                                              style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                                            >
+                                              {member.username}
+                                            </span>
+                                            {isTargetModerator && (
+                                              <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--primary-color)', textTransform: 'uppercase', fontWeight: '800' }}>
+                                                MOD
+                                              </span>
+                                            )}
+                                          </div>
+                                          {(() => {
+                                            const meta = activeChannelObj.memberMetadata?.find(m => (m.user?._id || m.user) === member._id);
+                                            if (meta?.expiryDate) {
+                                              const isExpired = new Date(meta.expiryDate) < new Date();
+                                              return (
+                                                <span style={{ fontSize: '0.65rem', color: isExpired ? '#ef4444' : 'var(--text-secondary)', fontWeight: '600' }}>
+                                                  {isExpired ? 'Expired' : `Expires: ${new Date(meta.expiryDate).toLocaleDateString()}`}
+                                                </span>
+                                              );
+                                            }
+                                            return <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{member.title || 'Member'}</span>;
+                                          })()}
+                                        </div>
+
+                                        {canManage && (
+                                          <div style={{ display: 'flex', gap: '4px' }}>
+                                            {isUserAdmin && (
+                                              <button
+                                                onClick={(e) => { e.stopPropagation(); handleToggleModerator(activeChannelObj._id, member._id); }}
+                                                title={isTargetModerator ? "Revoke Mod" : "Make Mod"}
+                                                style={{ background: 'transparent', border: 'none', color: isTargetModerator ? 'var(--primary-color)' : 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
+                                              >
+                                                <svg width="14" height="14" fill={isTargetModerator ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                              </button>
+                                            )}
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setGenericConfirm({
+                                                  isOpen: true,
+                                                  title: 'Set Expiry Date',
+                                                  message: 'Enter expiry date for this member (or leave empty to clear):',
+                                                  showInput: true,
+                                                  inputType: 'date',
+                                                  inputValue: '',
+                                                  confirmText: 'Set Expiry',
+                                                  onConfirm: (date) => handleSetMemberExpiry(activeChannelObj._id, member._id, date || null)
+                                                });
+                                              }}
+                                              title="Set Expiry"
+                                              style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
+                                            >
+                                              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                            </button>
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setGenericConfirm({
+                                                  isOpen: true,
+                                                  title: 'Remove Member',
+                                                  message: 'Are you sure you want to remove this user from the channel?',
+                                                  confirmText: 'Remove',
+                                                  isDanger: true,
+                                                  onConfirm: () => handleRemoveChannelMember(activeChannelObj._id, member._id)
+                                                });
+                                              }}
+                                              title="Remove User"
+                                              style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                                            >
+                                              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+
+                                {/* Individual Channel Settings */}
+                                <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--glass-border)' }}>
+                                  <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Conversation Settings</h4>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     <button
                                       onClick={() => { setChannelToLeave(activeChannelObj._id); setIsConfirmingLeave(true); }}
                                       style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                     >
-                                      Leave Channel
+                                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                                      {activeChannelObj?.isDirectMessage ? 'Close DM' : 'Leave Channel'}
                                     </button>
-                                  </>
-                                )}
+                                    <button
+                                      onClick={() => handleToggleMute(activeChannelObj._id)}
+                                      style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: mutedChannels.includes(activeChannelObj._id) ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.05)',
+                                        color: mutedChannels.includes(activeChannelObj._id) ? 'var(--primary-color)' : 'var(--text-primary)',
+                                        border: '1px solid ' + (mutedChannels.includes(activeChannelObj._id) ? 'rgba(16, 185, 129, 0.2)' : 'var(--glass-border)'),
+                                        borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                                      }}
+                                    >
+                                      {mutedChannels.includes(activeChannelObj._id) ? (
+                                        <>
+                                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                                          Unmute Notifications
+                                        </>
+                                      ) : (
+                                        <>
+                                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                                          Mute Notifications
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>
                         )}
+                      </>
+                    ) : (
+                      /* Settings Tab Content */
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div>
+                          <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Conversation Settings</h4>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {(activeChannelObj?.isDirectMessage) ? (
+                              <>
+                                <button
+                                  onClick={() => handleClearHistory(activeChannelObj._id)}
+                                  style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px' }}
+                                >
+                                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                  Clear Message History
+                                </button>
+                                <button
+                                  onClick={() => handleToggleBlock(activeChannelObj.participants.find(p => p._id !== user.id))}
+                                  style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', color: user.blockedUsers?.includes(activeChannelObj.participants.find(p => p._id !== user.id)?._id) ? 'var(--primary-color)' : '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px' }}
+                                >
+                                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                  {user.blockedUsers?.includes(activeChannelObj.participants.find(p => p._id !== user.id)?._id) ? 'Unblock User' : 'Block User'}
+                                </button>
+                              </>
+                            ) : (
+                              /* Channel Management (Admins & Moderators) */
+                              <>
+                                {(workspaceDetails?.createdBy === (user?.id || user?._id) || activeChannelObj?.moderators?.some(m => (m._id || m) === (user?.id || user?._id))) && (
+                                  <>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                      <label style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Channel Name</label>
+                                      <input
+                                        type="text"
+                                        value={editChannelName}
+                                        onChange={(e) => setEditChannelName(e.target.value)}
+                                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none', fontSize: '0.9rem' }}
+                                      />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                      <label style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Description</label>
+                                      <textarea
+                                        value={editChannelDescription}
+                                        onChange={(e) => setEditChannelDescription(e.target.value)}
+                                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none', fontSize: '0.9rem', minHeight: '80px', resize: 'vertical' }}
+                                      />
+                                    </div>
+                                    <button
+                                      onClick={() => handleUpdateChannel(activeChannelObj._id)}
+                                      style={{ width: '100%', padding: '10px', background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem' }}
+                                    >
+                                      Update Channel
+                                    </button>
+                                    <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--glass-border)' }}>
+                                      <h5 style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: '700', marginBottom: '12px' }}>Danger Zone</h5>
+                                      <button
+                                        style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                      >
+                                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        Archive Channel
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                                <button
+                                  onClick={() => { setChannelToLeave(activeChannelObj._id); setIsConfirmingLeave(true); }}
+                                  style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                >
+                                  Leave Channel
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', textAlign: 'center', padding: '40px', backgroundColor: 'var(--bg-dark)' }}>
@@ -3043,7 +2891,7 @@ const Dashboard = () => {
               <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '8px', zIndex: 10 }}>
                 {(viewedUser._id === user?.id || viewedUser.id === user?.id) && (
                   <>
-                    <button 
+                    <button
                       onClick={() => navigate('/profile')}
                       title="Edit Profile"
                       style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', transition: 'var(--transition)' }}
@@ -3052,7 +2900,7 @@ const Dashboard = () => {
                     >
                       <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                     </button>
-                    <button 
+                    <button
                       onClick={() => { setIsViewingProfile(false); setIsNotificationSettingsOpen(true); }}
                       title="Notification Settings"
                       style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', transition: 'var(--transition)' }}
@@ -3061,7 +2909,7 @@ const Dashboard = () => {
                     >
                       <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
                     </button>
-                    <button 
+                    <button
                       onClick={() => navigate('/profile')}
                       title="Settings & Status"
                       style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', transition: 'var(--transition)' }}
@@ -3070,7 +2918,7 @@ const Dashboard = () => {
                     >
                       <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     </button>
-                    <button 
+                    <button
                       onClick={() => { setIsViewingProfile(false); setIsAccountManagementOpen(true); }}
                       title="Account Security & Privacy"
                       style={{ background: 'rgba(239, 68, 68, 0.4)', border: 'none', color: 'white', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', transition: 'var(--transition)' }}
@@ -3081,7 +2929,7 @@ const Dashboard = () => {
                     </button>
                   </>
                 )}
-                <button 
+                <button
                   onClick={() => { setIsViewingProfile(false); setViewedUser(null); }}
                   title="Close"
                   style={{ background: 'rgba(0,0,0,0.3)', border: 'none', color: 'white', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', transition: 'var(--transition)' }}
@@ -3370,19 +3218,19 @@ const Dashboard = () => {
 
             {/* Tabs */}
             <div style={{ display: 'flex', borderBottom: '1px solid var(--glass-border)', padding: '0 24px', gap: '20px' }}>
-              <button 
+              <button
                 onClick={() => setSettingsTab('members')}
                 style={{ padding: '12px 0', background: 'transparent', border: 'none', borderBottom: settingsTab === 'members' ? '2px solid var(--primary-color)' : '2px solid transparent', color: settingsTab === 'members' ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: '600', cursor: 'pointer' }}
               >Members</button>
-              <button 
+              <button
                 onClick={() => setSettingsTab('general')}
                 style={{ padding: '12px 0', background: 'transparent', border: 'none', borderBottom: settingsTab === 'general' ? '2px solid var(--primary-color)' : '2px solid transparent', color: settingsTab === 'general' ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: '600', cursor: 'pointer' }}
               >General</button>
-              <button 
+              <button
                 onClick={() => setSettingsTab('audit')}
                 style={{ padding: '12px 0', background: 'transparent', border: 'none', borderBottom: settingsTab === 'audit' ? '2px solid var(--primary-color)' : '2px solid transparent', color: settingsTab === 'audit' ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: '600', cursor: 'pointer' }}
               >Audit Log</button>
-              <button 
+              <button
                 onClick={() => setSettingsTab('channelRequests')}
                 style={{ padding: '12px 0', background: 'transparent', border: 'none', borderBottom: settingsTab === 'channelRequests' ? '2px solid var(--primary-color)' : '2px solid transparent', color: settingsTab === 'channelRequests' ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: '600', cursor: 'pointer', position: 'relative' }}
               >
@@ -3414,19 +3262,19 @@ const Dashboard = () => {
                             <div>
                               <p style={{ fontSize: '0.9rem', fontWeight: '700' }}>{req.requester.username}</p>
                               <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                {req.type === 'create_channel' ? `Wants to create #${req.channelData.name}` : 
-                                 req.type === 'join_channel' ? `Wants to join #${req.channelId?.name}` :
-                                 req.type === 'leave_workspace' ? 'Requests to leave this workspace' : 'Unknown request'}
+                                {req.type === 'create_channel' ? `Wants to create #${req.channelData.name}` :
+                                  req.type === 'join_channel' ? `Wants to join #${req.channelId?.name}` :
+                                    req.type === 'leave_workspace' ? 'Requests to leave this workspace' : 'Unknown request'}
                               </p>
                             </div>
                           </div>
                           <div style={{ display: 'flex', gap: '8px' }}>
-                            <button 
+                            <button
                               onClick={() => req.type === 'leave_workspace' ? handleHandleLeaveRequest(req._id, 'reject') : handleChannelRequest(req._id, 'reject')}
                               disabled={isProcessingApproval}
                               style={{ padding: '6px 12px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
                             >Decline</button>
-                            <button 
+                            <button
                               onClick={() => req.type === 'leave_workspace' ? handleHandleLeaveRequest(req._id, 'approve') : handleChannelRequest(req._id, 'approve')}
                               disabled={isProcessingApproval}
                               style={{ padding: '6px 12px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
@@ -3448,50 +3296,50 @@ const Dashboard = () => {
                 <>
                   <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Manage Members</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {workspaceDetails?.members?.map(member => {
-                  const isOwner = workspaceDetails.createdBy === user?.id;
-                  const isSelf = member._id === user?.id;
+                    {workspaceDetails?.members?.map(member => {
+                      const isOwner = workspaceDetails.createdBy === user?.id;
+                      const isSelf = member._id === user?.id;
 
-                  return (
-                    <div key={member._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '700' }}>
-                          {member.username[0].toUpperCase()}
-                        </div>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>{member.username}</span>
-                            <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>
-                              {member.role || 'Member'}
-                            </span>
+                      return (
+                        <div key={member._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '700' }}>
+                              {member.username[0].toUpperCase()}
+                            </div>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>{member.username}</span>
+                                <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>
+                                  {member.role || 'Member'}
+                                </span>
+                              </div>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{member.email}</span>
+                            </div>
                           </div>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{member.email}</span>
-                        </div>
-                      </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {isOwner && !isSelf && (
-                          <select
-                            value={member.role || 'member'}
-                            onChange={(e) => handleUpdateRole(member._id, e.target.value)}
-                            style={{ padding: '6px 12px', backgroundColor: 'var(--bg-dark)', color: 'white', border: '1px solid var(--glass-border)', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', outline: 'none' }}
-                          >
-                            <option value="owner">Owner</option>
-                            <option value="admin">Admin</option>
-                            <option value="member">Member</option>
-                            <option value="guest">Guest</option>
-                          </select>
-                        )}
-                        {isOwner && !isSelf && (
-                          <button
-                            onClick={() => handleRemoveMember(member._id)}
-                            style={{ padding: '6px 12px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
-                          >Remove</button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {isOwner && !isSelf && (
+                              <select
+                                value={member.role || 'member'}
+                                onChange={(e) => handleUpdateRole(member._id, e.target.value)}
+                                style={{ padding: '6px 12px', backgroundColor: 'var(--bg-dark)', color: 'white', border: '1px solid var(--glass-border)', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', outline: 'none' }}
+                              >
+                                <option value="owner">Owner</option>
+                                <option value="admin">Admin</option>
+                                <option value="member">Member</option>
+                                <option value="guest">Guest</option>
+                              </select>
+                            )}
+                            {isOwner && !isSelf && (
+                              <button
+                                onClick={() => handleRemoveMember(member._id)}
+                                style={{ padding: '6px 12px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
+                              >Remove</button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </>
               )}
@@ -3499,31 +3347,31 @@ const Dashboard = () => {
               {settingsTab === 'general' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: '700' }}>General Settings</h4>
-                  
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-primary)' }}>Workspace Slug</label>
-                    <input 
-                      type="text" 
-                      value={editSlug} 
-                      onChange={(e) => setEditSlug(e.target.value)} 
-                      style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none' }} 
+                    <input
+                      type="text"
+                      value={editSlug}
+                      onChange={(e) => setEditSlug(e.target.value)}
+                      style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none' }}
                     />
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Share this slug so people can join: <strong>{window.location.origin}/join/{editSlug}</strong></p>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-primary)' }}>Allowed Email Domain</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="e.g. company.com"
-                      value={editDomain} 
-                      onChange={(e) => setEditDomain(e.target.value)} 
-                      style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none' }} 
+                      value={editDomain}
+                      onChange={(e) => setEditDomain(e.target.value)}
+                      style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none' }}
                     />
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Users with this email domain will automatically see your workspace.</p>
                   </div>
 
-                  <button 
+                  <button
                     onClick={handleUpdateWorkspaceSettings}
                     style={{ padding: '10px', background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', marginTop: '10px' }}
                   >Save Settings</button>
@@ -3634,7 +3482,7 @@ const Dashboard = () => {
             </div>
             <div style={{ padding: '24px' }}>
               <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.6' }}>
-                {channels.find(c => c._id === channelToLeave)?.isDirectMessage 
+                {channels.find(c => c._id === channelToLeave)?.isDirectMessage
                   ? "Are you sure you want to close this direct message? The history will be preserved if you reopen it later."
                   : `Are you sure you want to leave #${channels.find(c => c._id === channelToLeave)?.name}? You will need to be re-approved to join again.`}
               </p>
@@ -3669,10 +3517,10 @@ const Dashboard = () => {
               <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginBottom: genericConfirm.showInput ? '16px' : '24px', lineHeight: '1.6' }}>
                 {genericConfirm.message}
               </p>
-              
+
               {genericConfirm.showInput && (
                 <div style={{ marginBottom: '24px' }}>
-                  <input 
+                  <input
                     type={genericConfirm.inputType || 'text'}
                     value={genericConfirm.inputValue}
                     onChange={(e) => setGenericConfirm({ ...genericConfirm, inputValue: e.target.value })}
@@ -3719,7 +3567,7 @@ const Dashboard = () => {
             </div>
             <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Control which types of notifications you want to receive across Zyntry.</p>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {[
                   { key: 'channelMessages', label: 'Channel Messages', desc: 'Alerts for new messages in channels you belong to' },
@@ -3790,7 +3638,7 @@ const Dashboard = () => {
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: '1.5' }}>
                   Temporary disable your account. You can reactivate it at any time by logging back in. All your information will be retained.
                 </p>
-                <button 
+                <button
                   onClick={handleDeactivate}
                   style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '0.85rem' }}
                 >Deactivate Account</button>
@@ -3801,13 +3649,13 @@ const Dashboard = () => {
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.5' }}>
                   Permanently remove your account. This action cannot be easily undone.
                 </p>
-                
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <button 
+                  <button
                     onClick={() => handleDeleteRequest('standard')}
                     style={{ width: '100%', padding: '10px', backgroundColor: 'transparent', color: 'white', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '0.85rem' }}
                   >Delete Account (30 Days Wait)</button>
-                  <button 
+                  <button
                     onClick={() => handleDeleteRequest('instant')}
                     style={{ width: '100%', padding: '10px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem' }}
                   >Instant Delete (24 Hours Wait)</button>
@@ -3829,26 +3677,26 @@ const Dashboard = () => {
               <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
                 <svg width="32" height="32" fill="none" stroke="#ef4444" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
               </div>
-              
+
               <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'white', marginBottom: '12px' }}>
                 {accountInfo.status === 'deactivated' ? 'Account Deactivated' : 'Account Pending Deletion'}
               </h3>
-              
+
               <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.6' }}>
-                {accountInfo.status === 'deactivated' 
+                {accountInfo.status === 'deactivated'
                   ? 'Your account is currently deactivated. Would you like to reactivate it and continue?'
                   : `Your account is scheduled for permanent deletion in ${accountInfo.type === 'standard' ? '30 days' : '24 hours'}. Restoring it now will cancel this request.`
                 }
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <button 
+                <button
                   onClick={handleRestore}
                   style={{ width: '100%', padding: '14px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}
                 >
                   {accountInfo.status === 'deactivated' ? 'Reactivate Account' : 'Restore Account'}
                 </button>
-                <button 
+                <button
                   onClick={() => {
                     localStorage.removeItem('user');
                     localStorage.removeItem('token');
