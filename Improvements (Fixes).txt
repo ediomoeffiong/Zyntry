@@ -2,6 +2,10 @@ Workspace Settings
 -> Should be able to set domain for workspace.
 -> Should be able to invite users via link and get approved by admin or moderator.
 
+Prompt 10
+
+The "cancel" invite button throws this error: index-BDzmOv-p.js:13  POST https://zyntry.onrender.com/api/channels/69fa5eecefe35d87303e3552/cancel-join 400 (Bad Request)
+
 
 Prompt 5
 

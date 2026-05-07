@@ -20,7 +20,7 @@ exports.getNotifications = async (req, res, next) => {
 exports.markAsRead = async (req, res, next) => {
   try {
     const notification = await Notification.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user._id },
+      { _id: req.params.id, userId: req.user.id },
       { $set: { isRead: true } },
       { new: true }
     );
@@ -39,7 +39,7 @@ exports.markAsRead = async (req, res, next) => {
 exports.markAllAsRead = async (req, res, next) => {
   try {
     await Notification.updateMany(
-      { userId: req.user._id },
+      { userId: req.user.id },
       { $set: { isRead: true } }
     );
     res.json({ message: 'All notifications marked as read' });

@@ -578,7 +578,8 @@ const Dashboard = () => {
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
     } catch (err) {
-      console.error('Failed to mark all as read');
+      console.error('Failed to mark all as read:', err);
+      alert(`Error clearing notifications: ${err.response?.data?.message || err.message}`);
     }
   };
 
