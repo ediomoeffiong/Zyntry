@@ -641,7 +641,10 @@ const Dashboard = () => {
   const togglePin = async (channelId) => {
     try {
       const res = await axios.patch(`${apiBaseUrl}/channels/${channelId}/pin`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'x-workspace-id': activeWorkspace
+        }
       });
       setPinnedChannels(res.data.pinnedChannels);
       setSuccess(res.data.message);
@@ -680,7 +683,10 @@ const Dashboard = () => {
         workspaceId: activeWorkspace,
         channelOrder: newOrder
       }, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'x-workspace-id': activeWorkspace
+        }
       });
     } catch (err) {
       console.error('Failed to update channel order:', err);
