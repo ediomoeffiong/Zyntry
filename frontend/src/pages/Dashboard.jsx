@@ -1601,7 +1601,7 @@ const Dashboard = () => {
       {/* Sidebar */}
       {activeWorkspace && (
         <div className={`mobile-sidebar ${isSidebarOpen ? 'open' : 'sidebar-closed'}`} style={{ left: isMobile ? (isSidebarOpen ? '72px' : '-300px') : '0' }}>
-          <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ padding: `calc(24px + env(safe-area-inset-top, 0px)) 24px 24px 24px`, borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <h2 
