@@ -46,6 +46,33 @@ const io = new Server(server, {
 
 app.set('io', io);
 
+// Background Account Cleanup Task (Runs every hour)
+setInterval(async () => {
+  try {
+    const now = new Date();
+    const pendingUsers = await User.find({ accountStatus: 'pending_deletion' });
+    
+    for (const user of pendingUsers) {
+      const waitDays = user.deletionType === 'instant' ? 1 : 30; // 1 day (24h) or 30 days
+      const waitMs = waitDays * 24 * 60 * 60 * 1000;
+      
+      if (now - user.deletionRequestDate > waitMs) {
+        console.log(`[Cleanup] Permanently deleting account: ${user.username}`);
+        user.accountStatus = 'permanently_deleted';
+        user.fullName = undefined;
+        user.profilePicture = '';
+        user.title = undefined;
+        user.description = undefined;
+        user.password = '$2b$10$DELETED' + Math.random().toString(36).substring(7); // Scramble
+        user.status = 'offline';
+        await user.save();
+      }
+    }
+  } catch (err) {
+    console.error('Account Cleanup Error:', err);
+  }
+}, 3600000);
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

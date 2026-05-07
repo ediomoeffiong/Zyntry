@@ -106,6 +106,9 @@ const Dashboard = () => {
     requests: true
   });
   const [mutedChannels, setMutedChannels] = useState([]);
+  const [isAccountManagementOpen, setIsAccountManagementOpen] = useState(false);
+  const [isAccountRestoreModalOpen, setIsAccountRestoreModalOpen] = useState(false);
+  const [accountInfo, setAccountInfo] = useState(null); // { status, deletionDate, type }
 
   const getApiUrl = () => window.location.hostname === 'localhost' 
     ? 'http://localhost:5000/api' 
@@ -483,6 +486,16 @@ const Dashboard = () => {
       });
       if (res.data.notificationSettings) {
         setNotificationSettings(res.data.notificationSettings);
+      }
+      
+      // Check Account Status
+      if (res.data.accountStatus && res.data.accountStatus !== 'active') {
+        setAccountInfo({
+          status: res.data.accountStatus,
+          deletionDate: res.data.deletionRequestDate,
+          type: res.data.deletionType
+        });
+        setIsAccountRestoreModalOpen(true);
       }
     } catch (err) {
       console.error('Failed to fetch user profile:', err);
@@ -971,6 +984,51 @@ const Dashboard = () => {
       setSuccess('Notification settings updated');
     } catch (err) {
       setError('Failed to update notification settings');
+    }
+  };
+
+  const handleDeactivate = async () => {
+    try {
+      await axios.post(`${apiBaseUrl}/users/deactivate`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to deactivate account');
+    }
+  };
+
+  const handleDeleteRequest = async (type) => {
+    try {
+      const res = await axios.post(`${apiBaseUrl}/users/delete-request`, { type }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAccountInfo({
+        status: res.data.accountStatus,
+        deletionDate: res.data.deletionRequestDate,
+        type: res.data.deletionType
+      });
+      setIsAccountRestoreModalOpen(true);
+      setIsAccountManagementOpen(false);
+      setSuccess(res.data.message);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to request deletion');
+    }
+  };
+
+  const handleRestore = async () => {
+    try {
+      await axios.post(`${apiBaseUrl}/users/restore`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIsAccountRestoreModalOpen(false);
+      setAccountInfo(null);
+      setSuccess('Welcome back! Your account has been restored.');
+      window.location.reload();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to restore account');
     }
   };
 
@@ -1641,9 +1699,11 @@ const Dashboard = () => {
                 <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '600' }}>Channels</h4>
                 <button
                   onClick={() => setIsBrowsingChannels(true)}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: '600' }}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', opacity: 0.7 }}
                   title="Browse Channels"
-                >Browse</button>
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                </button>
               </div>
               <button
                 onClick={() => setIsCreatingChannel(!isCreatingChannel)}
@@ -3013,6 +3073,15 @@ const Dashboard = () => {
                     >
                       <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     </button>
+                    <button 
+                      onClick={() => { setIsViewingProfile(false); setIsAccountManagementOpen(true); }}
+                      title="Account Security & Privacy"
+                      style={{ background: 'rgba(239, 68, 68, 0.4)', border: 'none', color: 'white', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', transition: 'var(--transition)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.6)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.4)'}
+                    >
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    </button>
                   </>
                 )}
                 <button 
@@ -3702,6 +3771,94 @@ const Dashboard = () => {
                     Tip: You can also mute specific channels by visiting the <strong>Channel Details</strong> sidebar.
                   </p>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Account Management Modal */}
+      {isAccountManagementOpen && (
+        <div className="modal-overlay" style={{ zIndex: 6500 }} onClick={() => setIsAccountManagementOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ef4444' }}>Account Security</h3>
+              <button onClick={() => setIsAccountManagementOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ padding: '16px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                <h4 style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>Deactivate Account</h4>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: '1.5' }}>
+                  Temporary disable your account. You can reactivate it at any time by logging back in. All your information will be retained.
+                </p>
+                <button 
+                  onClick={handleDeactivate}
+                  style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '0.85rem' }}
+                >Deactivate Account</button>
+              </div>
+
+              <div style={{ padding: '16px', backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
+                <h4 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#ef4444', marginBottom: '8px' }}>Delete Account</h4>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.5' }}>
+                  Permanently remove your account. This action cannot be easily undone.
+                </p>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button 
+                    onClick={() => handleDeleteRequest('standard')}
+                    style={{ width: '100%', padding: '10px', backgroundColor: 'transparent', color: 'white', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '0.85rem' }}
+                  >Delete Account (30 Days Wait)</button>
+                  <button 
+                    onClick={() => handleDeleteRequest('instant')}
+                    style={{ width: '100%', padding: '10px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem' }}
+                  >Instant Delete (24 Hours Wait)</button>
+                </div>
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '12px', textAlign: 'center' }}>
+                  Note: Your username will be reserved and cannot be used by others.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Account Restore/Status Modal */}
+      {isAccountRestoreModalOpen && accountInfo && (
+        <div className="modal-overlay" style={{ zIndex: 7000 }}>
+          <div className="modal-content" style={{ maxWidth: '440px' }}>
+            <div style={{ padding: '32px', textAlign: 'center' }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                <svg width="32" height="32" fill="none" stroke="#ef4444" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              </div>
+              
+              <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'white', marginBottom: '12px' }}>
+                {accountInfo.status === 'deactivated' ? 'Account Deactivated' : 'Account Pending Deletion'}
+              </h3>
+              
+              <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.6' }}>
+                {accountInfo.status === 'deactivated' 
+                  ? 'Your account is currently deactivated. Would you like to reactivate it and continue?'
+                  : `Your account is scheduled for permanent deletion in ${accountInfo.type === 'standard' ? '30 days' : '24 hours'}. Restoring it now will cancel this request.`
+                }
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button 
+                  onClick={handleRestore}
+                  style={{ width: '100%', padding: '14px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}
+                >
+                  {accountInfo.status === 'deactivated' ? 'Reactivate Account' : 'Restore Account'}
+                </button>
+                <button 
+                  onClick={() => {
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                  }}
+                  style={{ width: '100%', padding: '12px', backgroundColor: 'transparent', color: 'var(--text-secondary)', border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer', fontSize: '0.9rem' }}
+                >Logout</button>
               </div>
             </div>
           </div>

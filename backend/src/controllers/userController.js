@@ -219,11 +219,80 @@ const updateNotificationSettings = async (req, res) => {
   }
 };
 
+// @desc    Deactivate account
+// @route   POST /api/users/deactivate
+// @access  Private
+const deactivateAccount = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.accountStatus = 'deactivated';
+    await user.save();
+
+    res.json({ message: 'Account deactivated successfully. You can reactivate it by logging back in.' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Request account deletion
+// @route   POST /api/users/delete-request
+// @access  Private
+const requestAccountDeletion = async (req, res) => {
+  try {
+    const { type } = req.body; // 'standard' or 'instant'
+    if (!['standard', 'instant'].includes(type)) {
+      return res.status(400).json({ message: 'Invalid deletion type' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.accountStatus = 'pending_deletion';
+    user.deletionRequestDate = new Date();
+    user.deletionType = type;
+    await user.save();
+
+    const waitPeriod = type === 'standard' ? '30 days' : '24 hours';
+    res.json({ 
+      message: `Account deletion requested. Your account will be permanently deleted in ${waitPeriod}. You can restore it anytime before then by logging in and selecting Restore.`,
+      accountStatus: user.accountStatus,
+      deletionRequestDate: user.deletionRequestDate,
+      deletionType: user.deletionType
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Restore account (cancel deactivation or pending deletion)
+// @route   POST /api/users/restore
+// @access  Private
+const restoreAccount = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.accountStatus = 'active';
+    user.deletionRequestDate = undefined;
+    user.deletionType = undefined;
+    await user.save();
+
+    res.json({ message: 'Account restored successfully!', accountStatus: user.accountStatus });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getUserProfile,
   updateProfile,
   updateStatus,
   updateCustomStatus,
   toggleBlockUser,
-  updateNotificationSettings
+  updateNotificationSettings,
+  deactivateAccount,
+  requestAccountDeletion,
+  restoreAccount
 };

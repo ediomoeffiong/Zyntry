@@ -12,7 +12,6 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: [true, 'Please add an email'],
-      unique: true,
       match: [
         /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
         'Please add a valid email',
@@ -89,6 +88,16 @@ const userSchema = new mongoose.Schema(
       requests: { type: Boolean, default: true },
     },
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    accountStatus: {
+      type: String,
+      enum: ['active', 'deactivated', 'pending_deletion', 'permanently_deleted'],
+      default: 'active'
+    },
+    deletionRequestDate: { type: Date },
+    deletionType: {
+      type: String,
+      enum: ['standard', 'instant']
+    },
   },
   {
     timestamps: true,
