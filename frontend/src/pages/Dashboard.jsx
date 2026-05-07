@@ -110,7 +110,7 @@ const Dashboard = () => {
   const [isAccountRestoreModalOpen, setIsAccountRestoreModalOpen] = useState(false);
   const [accountInfo, setAccountInfo] = useState(null); // { status, deletionDate, type }
 
-  const getApiUrl = () => window.location.hostname === 'localhost' 
+  const getApiUrl = () => (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:5000/api' 
     : 'https://zyntry.onrender.com/api';
   const apiBaseUrl = getApiUrl();
@@ -142,7 +142,7 @@ const Dashboard = () => {
   // Stable socket management
   useEffect(() => {
     if (token && !socketRef.current) {
-      const socketUrl = window.location.hostname === 'localhost'
+      const socketUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
         ? 'http://localhost:5000'
         : 'https://zyntry.onrender.com';
 
@@ -392,9 +392,6 @@ const Dashboard = () => {
     }
 
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/search?q=${query}&workspaceId=${activeWorkspace}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -411,9 +408,6 @@ const Dashboard = () => {
     e.preventDefault();
     if (!lookupSlug.trim()) return;
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/workspaces/lookup/${lookupSlug}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -427,7 +421,6 @@ const Dashboard = () => {
     if (isJoiningWorkspace && lookupSlug && !workspacePreview) {
       const triggerLookup = async () => {
         try {
-          const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
           const res = await axios.get(`${apiBaseUrl}/workspaces/lookup/${lookupSlug}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
@@ -456,9 +449,6 @@ const Dashboard = () => {
 
   const fetchWorkspaceDetails = async (id) => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/workspaces/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -579,7 +569,6 @@ const Dashboard = () => {
 
   const markAllNotificationsAsRead = async () => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
       await axios.put(`${apiBaseUrl}/notifications/read-all`, {}, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -1053,9 +1042,6 @@ const Dashboard = () => {
     if (!channelToLeave) return;
 
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       await axios.post(`${apiBaseUrl}/channels/${channelToLeave}/leave`, {}, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -1193,9 +1179,6 @@ const Dashboard = () => {
 
   const handleRemoveChannelMember = async (channelId, userId) => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       await axios.delete(`${apiBaseUrl}/channels/${channelId}/members/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -1392,7 +1375,6 @@ const Dashboard = () => {
     }
     
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
       await axios.post(`${apiBaseUrl}/workspaces/${activeWorkspace}/leave`, { password: leavePassword }, {
         headers: { 
           Authorization: `Bearer ${token}`,
@@ -1888,7 +1870,6 @@ const Dashboard = () => {
                       key={member._id}
                       onClick={async () => {
                         try {
-                          const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
                           const res = await axios.post(`${apiBaseUrl}/channels/dm`, {
                             userId: member._id,
                             workspaceId: activeWorkspace
