@@ -1522,7 +1522,7 @@ const Dashboard = () => {
         </button>
 
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '12px' }}>
-          <div style={{ position: 'relative' }}>
+          <div className="notification-container" style={{ position: 'relative' }}>
             <button
               onClick={() => setIsNotificationOpen(!isNotificationOpen)}
               className={`workspace-icon ${isNotificationOpen ? 'workspace-icon-active' : ''}`}
