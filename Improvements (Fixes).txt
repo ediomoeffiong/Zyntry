@@ -15,8 +15,22 @@ Also, the notification button does not seem to be showing when there is no works
 Let the default status be "online" not offline.
 
 
+Prompt 6C
+Allow users to be able to pin channels (up to 5 pins)
+Allow users to be able to freely rearrange the channels order by dragging. Pinned items must always stay at the top but can be rearranged within the top.
+When a user clicks "Join" for a channel. The join button should change to "Cancel Request" or "Cancel" something related (maybe use a shorter word). The cancel request should cancel the invitation from sending to the moderator or admin... when clicked, it should turn back to "Join"
 
-Prompt 6
+A page reload is required for the admin to see requests that were sent while the page was not loaded. E.g. Channel join request. Fix that. A page reload should not be required.
+
+When a page is blurred (for instance, when the browse channels is clicked. Incoming notifications should come above the blur not below. for instance, the notification that comes when a join button is clicked.
+
+Prompt 7
+If I enter the notification sent for someone that requested to join a channel or someone that messaged me, clicking it should take that action i.e. Go to where I can approve the user to join the channel, or enter the person's inbox, or channel inbox, or whatever.
+
+There should be notification settings where you can toggle on or off different type of notifications, and forms of notifications. i.e. Notifications for channels messages, notifications for direct messages, etc. Also, each channel should have a place where you can mute the channel notifications so you don't receive it for that particular channel unless you unmute. This can be placed in the channel settings.
+
+
+Prompt 8
 
 Also, allow users to be able to delete their account in their settings. Include two options "Deactivate" and "Delete". Deactivate just shuts down their account and mandate them to activate it back during login while retaining all their information. If the user selects "Delete", the system waits for 30 days and then deletes all their information. There should be appropriate warning and instructions for these. If the user deletes their account and log in within the duration of 30 days, they are given the option to "Restore" their account which brings their account back to live and stops it or their information from deleting after 30 days. Also, the same username should not be allowed for any other user even after all their information has been deleted - this stops any form of fraud. However, the same email can be used after the information has been wiped out and if the same username tries to register but with the same email (as the previous account), then it should be allowed.
 

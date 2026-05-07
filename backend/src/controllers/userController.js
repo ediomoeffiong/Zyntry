@@ -168,9 +168,37 @@ const updateCustomStatus = async (req, res) => {
   }
 };
 
+// @desc    Toggle block/unblock user
+// @route   POST /api/users/block/:userId
+// @access  Private
+const toggleBlockUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    const targetUserId = req.params.userId;
+
+    if (user.id === targetUserId) {
+      return res.status(400).json({ message: 'You cannot block yourself' });
+    }
+
+    const isBlocked = user.blockedUsers.includes(targetUserId);
+
+    if (isBlocked) {
+      user.blockedUsers = user.blockedUsers.filter(id => id.toString() !== targetUserId);
+    } else {
+      user.blockedUsers.push(targetUserId);
+    }
+
+    await user.save();
+    res.json({ message: isBlocked ? 'User unblocked' : 'User blocked', blockedUsers: user.blockedUsers });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getUserProfile,
   updateProfile,
   updateStatus,
   updateCustomStatus,
+  toggleBlockUser,
 };

@@ -693,23 +693,11 @@ const deleteWorkspace = async (req, res) => {
   }
 };
 
-// @desc    Leave workspace
-// @route   POST /api/workspaces/:workspaceId/leave
+// @desc    Request to leave workspace
+// @route   POST /api/workspaces/:workspaceId/leave-request
 // @access  Private
-const leaveWorkspace = async (req, res) => {
+const requestToLeaveWorkspace = async (req, res) => {
   try {
-    const { password } = req.body;
-    if (!password) {
-      return res.status(400).json({ message: 'Password is required to leave a workspace' });
-    }
-
-    const user = await User.findById(req.user.id);
-    const isMatch = await user.matchPassword(password);
-
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Incorrect password' });
-    }
-
     const workspace = await Workspace.findById(req.params.workspaceId);
     if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -724,36 +712,131 @@ const leaveWorkspace = async (req, res) => {
       }
     }
 
-    // Remove from workspace members
-    workspace.members = workspace.members.filter(m => m.user.toString() !== req.user.id);
-    
-    // Add audit log
-    workspace.auditLogs.push({
-      action: 'MEMBER_LEFT',
-      performedBy: req.user.id,
-      details: 'User left the workspace voluntarily'
+    // Check if leave request already exists
+    const Request = require('../models/Request');
+    const existingRequest = await Request.findOne({
+      workspaceId: workspace._id,
+      requester: req.user.id,
+      type: 'leave_workspace',
+      status: 'pending'
     });
 
-    await workspace.save();
+    if (existingRequest) {
+      return res.status(400).json({ message: 'Leave request already pending' });
+    }
 
-    // Remove workspace from user's list
-    await User.findByIdAndUpdate(req.user.id, {
-      $pull: { workspaces: workspace._id }
+    await Request.create({
+      type: 'leave_workspace',
+      requester: req.user.id,
+      workspaceId: workspace._id,
     });
 
-    // Remove user from all channels in this workspace
-    await Channel.updateMany(
-      { workspaceId: workspace._id },
-      { 
-        $pull: { 
-          members: req.user.id,
-          moderators: req.user.id,
-          memberMetadata: { user: req.user.id }
-        } 
+    // Notify admins
+    const { createNotification } = require('./notificationController');
+    const admins = workspace.members.filter(m => ['owner', 'admin'].includes(m.role));
+    for (const admin of admins) {
+      if (admin.user.toString() !== req.user.id) {
+        await createNotification(req.app, {
+          userId: admin.user,
+          type: 'CHANNEL_JOIN_REQUEST',
+          title: 'Leave Request',
+          message: `${req.user.username} has requested to leave ${workspace.name}`,
+          metadata: { workspaceId: workspace._id }
+        });
       }
-    );
+    }
 
-    res.json({ message: 'Successfully left the workspace' });
+    res.status(201).json({ message: 'Leave request submitted to admins' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Handle leave workspace request (approve/reject)
+// @route   POST /api/workspaces/:workspaceId/leave-requests/:requestId
+// @access  Private (Owner/Admin only)
+const handleLeaveRequest = async (req, res) => {
+  try {
+    const { action } = req.body; // 'approve' or 'reject'
+    const Request = require('../models/Request');
+    const leaveReq = await Request.findById(req.params.requestId);
+    if (!leaveReq || leaveReq.type !== 'leave_workspace') {
+      return res.status(404).json({ message: 'Leave request not found' });
+    }
+
+    const workspace = await Workspace.findById(req.params.workspaceId);
+    if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
+
+    // Check permissions
+    const requesterMember = workspace.members.find(m => m.user.toString() === req.user.id);
+    if (!requesterMember || !['owner', 'admin'].includes(requesterMember.role)) {
+      return res.status(403).json({ message: 'Only workspace owners and admins can handle leave requests' });
+    }
+
+    if (action === 'reject') {
+      leaveReq.status = 'rejected';
+      await leaveReq.save();
+      
+      await createNotification(req.app, {
+        userId: leaveReq.requester,
+        type: 'LEAVE_REQUEST_REJECTED',
+        title: 'Leave Request Declined',
+        message: `Your request to leave ${workspace.name} was declined.`,
+        metadata: { workspaceId: workspace._id }
+      });
+
+      return res.json({ message: 'Leave request rejected' });
+    }
+
+    if (action === 'approve') {
+      const targetUserId = leaveReq.requester.toString();
+      
+      // Remove from workspace members
+      workspace.members = workspace.members.filter(m => m.user.toString() !== targetUserId);
+      
+      // Add audit log
+      workspace.auditLogs.push({
+        action: 'MEMBER_LEFT',
+        performedBy: req.user.id,
+        targetUser: targetUserId,
+        details: 'Approved leave request'
+      });
+
+      await workspace.save();
+
+      // Remove workspace from user's list
+      await User.findByIdAndUpdate(targetUserId, {
+        $pull: { workspaces: workspace._id }
+      });
+
+      // Remove user from all channels in this workspace
+      await Channel.updateMany(
+        { workspaceId: workspace._id },
+        { 
+          $pull: { 
+            members: targetUserId,
+            moderators: targetUserId,
+            memberMetadata: { user: targetUserId }
+          } 
+        }
+      );
+
+      leaveReq.status = 'approved';
+      leaveReq.approvedBy = req.user.id;
+      await leaveReq.save();
+
+      await createNotification(req.app, {
+        userId: targetUserId,
+        type: 'LEAVE_REQUEST_APPROVED',
+        title: 'Leave Request Approved',
+        message: `You have been removed from ${workspace.name}.`,
+        metadata: { workspaceId: workspace._id }
+      });
+
+      return res.json({ message: 'Leave request approved and user removed' });
+    }
+
+    res.status(400).json({ message: 'Invalid action' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -777,5 +860,6 @@ module.exports = {
   removeUser,
   updateSettings,
   deleteWorkspace,
-  leaveWorkspace,
+  requestToLeaveWorkspace,
+  handleLeaveRequest,
 };

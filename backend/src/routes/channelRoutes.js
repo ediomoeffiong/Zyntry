@@ -12,7 +12,8 @@ const {
   handleChannelRequest,
   removeMember,
   setMemberExpiry,
-  toggleModerator
+  toggleModerator,
+  clearChannelHistory
 } = require('../controllers/channelController');
 const { protect } = require('../middleware/authMiddleware');
 const { verifyWorkspaceMembership } = require('../middleware/workspaceMiddleware');
@@ -36,5 +37,6 @@ router.delete('/:channelId', verifyWorkspaceMembership, deleteChannel);
 router.delete('/:channelId/members/:userId', verifyWorkspaceMembership, removeMember);
 router.patch('/:channelId/members/:userId/expiry', verifyWorkspaceMembership, setMemberExpiry);
 router.patch('/:channelId/moderators', verifyWorkspaceMembership, toggleModerator);
+router.delete('/:channelId/messages', verifyWorkspaceMembership, clearChannelHistory);
 
 module.exports = router;

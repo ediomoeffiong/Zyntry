@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Request = require('../models/Request');
 const { createNotification } = require('../utils/notifications');
 const Workspace = require('../models/Workspace');
+const Message = require('../models/Message');
 
 // @desc    Request to create a channel
 // @route   POST /api/channels
@@ -580,6 +581,38 @@ exports.toggleModerator = async (req, res, next) => {
     }
 
     res.json({ message: 'Moderator rights updated', moderators: channel.moderators });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Clear channel history
+// @route   DELETE /api/channels/:channelId/messages
+// @access  Private (Admins and DM participants)
+exports.clearChannelHistory = async (req, res, next) => {
+  try {
+    const channel = await Channel.findById(req.params.channelId);
+    if (!channel) return res.status(404).json({ message: 'Channel not found' });
+
+    // Permission check
+    const isDMParticipant = channel.isDirectMessage && channel.participants.some(p => p.toString() === req.user._id.toString());
+    const workspace = await Workspace.findById(channel.workspaceId);
+    const member = workspace.members.find(m => m.user.toString() === req.user._id.toString());
+    const isAdmin = ['owner', 'admin'].includes(member?.role);
+    const isModerator = channel.moderators.includes(req.user._id);
+
+    if (!isAdmin && !isModerator && !isDMParticipant) {
+      return res.status(403).json({ message: 'Only admins, moderators, or DM participants can clear history' });
+    }
+
+    await Message.deleteMany({ channelId: req.params.channelId });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`channel_${req.params.channelId}`).emit('messages_cleared', { channelId: req.params.channelId });
+    }
+
+    res.json({ message: 'Message history cleared successfully' });
   } catch (error) {
     next(error);
   }

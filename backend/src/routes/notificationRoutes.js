@@ -6,8 +6,8 @@ const { verifyWorkspaceMembership } = require('../middleware/workspaceMiddleware
 
 router.use(protect);
 
-router.get('/', verifyWorkspaceMembership, getNotifications);
-router.put('/read-all', verifyWorkspaceMembership, markAllAsRead);
-router.put('/:id/read', protect, markAsRead);
+router.get('/', getNotifications);
+router.put('/read-all', markAllAsRead);
+router.put('/:id/read', markAsRead);
 
 module.exports = router;

@@ -443,10 +443,19 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    if (token) {
+      fetchNotifications();
+      fetchWorkspaces();
+      fetchUserInvites();
+    }
+  }, [token]);
+
+  useEffect(() => {
     if (activeWorkspace) {
       fetchChannels();
       fetchWorkspaceDetails(activeWorkspace);
       fetchChannelRequests();
+      fetchNotifications(); // Refresh on workspace change too
       localStorage.setItem('activeWorkspace', activeWorkspace);
       setSelectedChannel(null); // Clear selection when workspace changes
       setMessages([]);
@@ -538,8 +547,8 @@ const Dashboard = () => {
           setIsInfoSidebarOpen(false);
         } else if (n.type.includes('REQUEST')) {
           // Open workspace settings -> Requests tab
-          setIsSettingsOpen(true);
-          setSettingsTab('requests');
+          setSettingsTab('channelRequests');
+          setIsWorkspaceSettingsOpen(true);
           setIsNotificationOpen(false);
         }
       } else if (n.type.includes('WORKSPACE')) {
@@ -547,8 +556,8 @@ const Dashboard = () => {
           setActiveWorkspace(n.metadata.workspaceId);
           setIsNotificationOpen(false);
         } else if (n.type.includes('REQUEST')) {
-          setIsSettingsOpen(true);
-          setSettingsTab('requests');
+          setSettingsTab('channelRequests');
+          setIsWorkspaceSettingsOpen(true);
           setIsNotificationOpen(false);
         }
       }
@@ -557,12 +566,6 @@ const Dashboard = () => {
     }
   };
 
-  const logout = () => {
-    removeToken();
-    localStorage.removeItem('user');
-    if (socketRef.current) socketRef.current.disconnect();
-    navigate('/login');
-  };
 
   const onLogout = () => {
     removeToken();
@@ -622,6 +625,96 @@ const Dashboard = () => {
       }
     }
   };
+
+  const handleClearHistory = async (channelId) => {
+    setGenericConfirm({
+      isOpen: true,
+      title: 'Clear Message History',
+      message: 'Are you sure you want to clear all messages in this conversation? This action cannot be undone.',
+      confirmText: 'Clear History',
+      cancelText: 'Cancel',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await axios.delete(`${getApiUrl()}/channels/${channelId}/messages`, {
+            headers: { Authorization: `Bearer ${token}`, 'x-workspace-id': activeWorkspace }
+          });
+          setMessages([]);
+          setSuccess('Message history cleared');
+          setGenericConfirm(prev => ({ ...prev, isOpen: false }));
+        } catch (err) {
+          setError(err.response?.data?.message || 'Failed to clear history');
+          setGenericConfirm(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
+  };
+
+  const handleToggleBlock = async (targetUser) => {
+    const isBlocked = user.blockedUsers?.includes(targetUser._id);
+    setGenericConfirm({
+      isOpen: true,
+      title: isBlocked ? 'Unblock User' : 'Block User',
+      message: isBlocked 
+        ? `Are you sure you want to unblock ${targetUser.username}?` 
+        : `Are you sure you want to block ${targetUser.username}? You will no longer see their messages.`,
+      confirmText: isBlocked ? 'Unblock' : 'Block User',
+      cancelText: 'Cancel',
+      isDanger: !isBlocked,
+      onConfirm: async () => {
+        try {
+          const res = await axios.post(`${getApiUrl()}/users/block/${targetUser._id}`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          // Update local user state
+          const updatedUser = { ...user, blockedUsers: res.data.blockedUsers };
+          setUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          setSuccess(res.data.message);
+          setGenericConfirm(prev => ({ ...prev, isOpen: false }));
+        } catch (err) {
+          setError(err.response?.data?.message || 'Failed to update block status');
+          setGenericConfirm(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
+  };
+
+  const handleRequestLeaveWorkspace = async () => {
+    setGenericConfirm({
+      isOpen: true,
+      title: 'Leave Workspace Request',
+      message: 'You are about to request to leave this workspace. This request must be approved by an admin or owner. Proceed?',
+      confirmText: 'Send Request',
+      cancelText: 'Cancel',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          const res = await axios.post(`${getApiUrl()}/workspaces/${activeWorkspace}/leave-request`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setSuccess(res.data.message);
+          setGenericConfirm(prev => ({ ...prev, isOpen: false }));
+        } catch (err) {
+          setError(err.response?.data?.message || 'Failed to send leave request');
+          setGenericConfirm(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
+  };
+
+  const handleHandleLeaveRequest = async (requestId, action) => {
+    try {
+      const res = await axios.post(`${getApiUrl()}/workspaces/${activeWorkspace}/leave-requests/${requestId}`, { action }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSuccess(res.data.message);
+      fetchWorkspaceDetails(activeWorkspace);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to handle leave request');
+    }
+  };
+
 
   const startDM = async (e) => {
     e.preventDefault();
@@ -1209,6 +1302,82 @@ const Dashboard = () => {
         >
           +
         </button>
+
+        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '12px' }}>
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+              className={`workspace-icon ${isNotificationOpen ? 'workspace-icon-active' : ''}`}
+              style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', position: 'relative', width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: 'none', transition: 'var(--transition)' }}
+              title="Notifications"
+            >
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+              {unreadCount > 0 && (
+                <span style={{ position: 'absolute', top: '-4px', right: '-4px', backgroundColor: '#ef4444', color: 'white', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '10px', fontWeight: '800', border: '2px solid #1a1b1e' }}>
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {isNotificationOpen && (
+              <div className="notification-panel" style={{
+                position: 'fixed',
+                top: isMobile ? '16px' : 'auto',
+                bottom: isMobile ? 'auto' : '16px',
+                left: isMobile ? '16px' : '88px',
+                right: isMobile ? '16px' : 'auto',
+                width: isMobile ? 'calc(100vw - 32px)' : '350px',
+                backgroundColor: 'var(--bg-card)',
+                borderRadius: '16px',
+                border: '1px solid var(--glass-border)',
+                boxShadow: 'var(--shadow-premium)',
+                zIndex: 3000,
+                overflow: 'hidden',
+                animation: 'fadeIn 0.2s ease-out'
+              }}>
+                <div style={{ padding: '16px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: '700' }}>Notifications</h4>
+                  <button
+                    onClick={markAllNotificationsAsRead}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
+                  >Mark all as read</button>
+                </div>
+                <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                  {notifications.length === 0 ? (
+                    <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No notifications yet</div>
+                  ) : (
+                    notifications.map(n => (
+                      <div
+                        key={n._id}
+                        onClick={() => handleNotificationClick(n)}
+                        style={{
+                          padding: '16px',
+                          borderBottom: '1px solid var(--glass-border)',
+                          cursor: 'pointer',
+                          backgroundColor: n.isRead ? 'transparent' : 'rgba(16, 185, 129, 0.05)',
+                          transition: 'var(--transition)'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = n.isRead ? 'transparent' : 'rgba(16, 185, 129, 0.05)'}
+                      >
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                          <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                          </div>
+                          <div>
+                            <p style={{ fontSize: '0.85rem', fontWeight: '700', marginBottom: '2px' }}>{n.title}</p>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{n.message}</p>
+                            <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '8px', opacity: 0.6 }}>{new Date(n.createdAt).toLocaleDateString()} at {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Sidebar */}
@@ -1569,6 +1738,13 @@ const Dashboard = () => {
               </div>
             </div>
             <button
+              onClick={handleRequestLeaveWorkspace}
+              style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(239, 68, 68, 0.05)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.1)', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'var(--transition)', marginBottom: '8px' }}
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+              Leave Workspace
+            </button>
+            <button
               onClick={onLogout}
               style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'var(--transition)' }}
             >
@@ -1697,71 +1873,6 @@ const Dashboard = () => {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <div style={{ position: 'relative' }}>
-                    <button
-                      onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                      style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    >
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                      {unreadCount > 0 && (
-                        <span style={{ position: 'absolute', top: '-4px', right: '-4px', backgroundColor: '#ef4444', color: 'white', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '10px', fontWeight: '800', border: '2px solid var(--bg-card)' }}>
-                          {unreadCount}
-                        </span>
-                      )}
-                    </button>
-
-                    {isNotificationOpen && (
-                      <div style={{
-                        position: isMobile ? 'fixed' : 'absolute',
-                        top: isMobile ? '70px' : '100%',
-                        right: isMobile ? '16px' : '0',
-                        left: isMobile ? '16px' : 'auto',
-                        width: isMobile ? 'auto' : '320px',
-                        maxWidth: isMobile ? 'none' : '320px',
-                        backgroundColor: 'var(--bg-card)',
-                        borderRadius: '16px',
-                        border: '1px solid var(--glass-border)',
-                        boxShadow: 'var(--shadow-premium)',
-                        marginTop: '12px',
-                        zIndex: 3000,
-                        overflow: 'hidden',
-                        animation: 'fadeIn 0.2s ease-out'
-                      }}>
-                        <div style={{ padding: '16px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <h4 style={{ fontSize: '0.9rem', fontWeight: '700' }}>Notifications</h4>
-                          <button
-                            onClick={markAllNotificationsAsRead}
-                            style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
-                          >Mark all as read</button>
-                        </div>
-                        <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                          {notifications.length === 0 ? (
-                            <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No notifications yet</div>
-                          ) : (
-                            notifications.map(n => (
-                              <div
-                                key={n._id}
-                                onClick={() => handleNotificationClick(n)}
-                                style={{
-                                  padding: '16px',
-                                  borderBottom: '1px solid var(--glass-border)',
-                                  cursor: 'pointer',
-                                  backgroundColor: n.isRead ? 'transparent' : 'rgba(16, 185, 129, 0.05)',
-                                  transition: 'var(--transition)'
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
-                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = n.isRead ? 'transparent' : 'rgba(16, 185, 129, 0.05)'}
-                              >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                  <span style={{ fontSize: '0.85rem', fontWeight: '700', color: n.isRead ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{n.title}</span>
-                                  <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                </div>
-                                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{n.message}</p>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   <div
@@ -2255,16 +2366,18 @@ const Dashboard = () => {
                                 {(activeChannelObj?.isDirectMessage) ? (
                                   <>
                                     <button 
+                                      onClick={() => handleClearHistory(activeChannelObj._id)}
                                       style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px' }}
                                     >
                                       <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                       Clear Message History
                                     </button>
                                     <button 
-                                      style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px' }}
+                                      onClick={() => handleToggleBlock(activeChannelObj.participants.find(p => p._id !== user.id))}
+                                      style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', color: user.blockedUsers?.includes(activeChannelObj.participants.find(p => p._id !== user.id)?._id) ? 'var(--primary-color)' : '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px' }}
                                     >
                                       <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
-                                      Block User
+                                      {user.blockedUsers?.includes(activeChannelObj.participants.find(p => p._id !== user.id)?._id) ? 'Unblock User' : 'Block User'}
                                     </button>
                                   </>
                                 ) : (
@@ -2953,7 +3066,7 @@ const Dashboard = () => {
             <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
               {settingsTab === 'channelRequests' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '4px' }}>Pending Channel Requests</h4>
+                  <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '4px' }}>Pending Requests</h4>
                   {channelRequests.length === 0 ? (
                     <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)', backgroundColor: 'rgba(255,255,255,0.01)', borderRadius: '12px', border: '1px dashed var(--glass-border)' }}>
                       No pending requests.
@@ -2961,26 +3074,28 @@ const Dashboard = () => {
                   ) : (
                     channelRequests.map(req => (
                       <div key={req._id} style={{ padding: '16px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: req.channelData?.description ? '12px' : '0' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: req.type === 'leave_workspace' ? 'rgba(239, 68, 68, 0.2)' : 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: req.type === 'leave_workspace' ? '#ef4444' : 'white' }}>
                               {req.requester.username[0].toUpperCase()}
                             </div>
                             <div>
                               <p style={{ fontSize: '0.9rem', fontWeight: '700' }}>{req.requester.username}</p>
                               <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                {req.type === 'create_channel' ? `Wants to create #${req.channelData.name}` : `Wants to join #${req.channelId?.name}`}
+                                {req.type === 'create_channel' ? `Wants to create #${req.channelData.name}` : 
+                                 req.type === 'join_channel' ? `Wants to join #${req.channelId?.name}` :
+                                 req.type === 'leave_workspace' ? 'Requests to leave this workspace' : 'Unknown request'}
                               </p>
                             </div>
                           </div>
                           <div style={{ display: 'flex', gap: '8px' }}>
                             <button 
-                              onClick={() => handleChannelRequest(req._id, 'reject')}
+                              onClick={() => req.type === 'leave_workspace' ? handleHandleLeaveRequest(req._id, 'reject') : handleChannelRequest(req._id, 'reject')}
                               disabled={isProcessingApproval}
                               style={{ padding: '6px 12px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
                             >Decline</button>
                             <button 
-                              onClick={() => handleChannelRequest(req._id, 'approve')}
+                              onClick={() => req.type === 'leave_workspace' ? handleHandleLeaveRequest(req._id, 'approve') : handleChannelRequest(req._id, 'approve')}
                               disabled={isProcessingApproval}
                               style={{ padding: '6px 12px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
                             >Approve</button>

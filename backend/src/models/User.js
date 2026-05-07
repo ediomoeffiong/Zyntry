@@ -72,7 +72,7 @@ const userSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ['online', 'away', 'offline'],
-      default: 'away',
+      default: 'online',
     },
     lastActiveAt: {
       type: Date,
@@ -82,6 +82,7 @@ const userSchema = new mongoose.Schema(
       text: { type: String, trim: true, maxlength: 100 },
       emoji: { type: String, trim: true },
     },
+    blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   },
   {
     timestamps: true,

@@ -9,7 +9,7 @@ const verifyWorkspaceMembership = async (req, res, next) => {
       (req?.params && req.params.workspaceId) ||
       (req?.params && req.params.id);
 
-    console.log('Verifying membership for Workspace ID:', workspaceId);
+    console.log('Verifying membership for Workspace ID:', workspaceId, 'URL:', req.originalUrl);
 
     if (!workspaceId) {
       return res.status(400).json({ message: 'Workspace ID is required' });

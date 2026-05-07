@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const requestSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['join_channel', 'create_channel'],
+    enum: ['join_channel', 'create_channel', 'leave_workspace'],
     required: true
   },
   status: {
