@@ -28,7 +28,7 @@ body {
   font-family: 'Inter', sans-serif;
   background-color: var(--bg-dark);
   color: var(--text-primary);
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 h1, h2, h3, h4 {

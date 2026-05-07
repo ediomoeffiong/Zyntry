@@ -706,7 +706,10 @@ const Dashboard = () => {
       if (aIndex !== -1) return -1;
       if (bIndex !== -1) return 1;
       
-      return 0;
+      // Both are unordered: sort by createdAt ascending (newest at bottom)
+      const dateA = new Date(a.createdAt || a.updatedAt || 0);
+      const dateB = new Date(b.createdAt || b.updatedAt || 0);
+      return dateA - dateB;
     });
   };
 
@@ -974,6 +977,8 @@ const Dashboard = () => {
       setError('Failed to toggle mute status');
     }
   };
+
+
 
   const handleUpdateNotificationSettings = async (settings) => {
     try {
@@ -1845,9 +1850,13 @@ const Dashboard = () => {
               <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '600' }}>Direct Messages</h4>
               <button
                 onClick={() => setIsCreatingDM(!isCreatingDM)}
-                style={{ background: 'rgba(16, 185, 129, 0.1)', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', width: '24px', height: '24px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--transition)' }}
-                title="Start DM"
-              >+</button>
+                style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', width: '24px', height: '24px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--transition)' }}
+                title="Search Users"
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+              >
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </button>
             </div>
 
             {isCreatingDM && (

@@ -24,7 +24,7 @@ A page reload is required for the admin to see requests that were sent while the
 
 When a page is blurred (for instance, when the browse channels is clicked. Incoming notifications should come above the blur not below. for instance, the notification that comes when a join button is clicked.
 
-Prompt 7
+Prompt 7C
 If I enter the notification sent for someone that requested to join a channel or someone that messaged me, clicking it should take that action i.e. Go to where I can approve the user to join the channel, or enter the person's inbox, or channel inbox, or whatever.
 
 There should be notification settings where you can toggle on or off different type of notifications, and forms of notifications. i.e. Notifications for channels messages, notifications for direct messages, etc. Also, each channel should have a place where you can mute the channel notifications so you don't receive it for that particular channel unless you unmute. This can be placed in the channel settings.
@@ -35,6 +35,46 @@ Prompt 8
 Also, allow users to be able to delete their account in their settings. Include two options "Deactivate" and "Delete". Deactivate just shuts down their account and mandate them to activate it back during login while retaining all their information. If the user selects "Delete", the system waits for 30 days and then deletes all their information. There should be appropriate warning and instructions for these. If the user deletes their account and log in within the duration of 30 days, they are given the option to "Restore" their account which brings their account back to live and stops it or their information from deleting after 30 days. Also, the same username should not be allowed for any other user even after all their information has been deleted - this stops any form of fraud. However, the same email can be used after the information has been wiped out and if the same username tries to register but with the same email (as the previous account), then it should be allowed.
 
 Also, add the feature of instant delete, where the user instantly deletes their account and wipes all their information without the waiting of 30 days. This can be reversed within 24 hours (after which their whole information should be wiped out).
+
+Prompt 9
+
+Yes, so upon deletion, also reserve email addresses (in case they want to claim their username back).
+
+Also, add a functional search icon for direct messages.
+
+Also, for mobile, (check the image to see), the message box should be sort of sticky and always in view so the user does not have to scroll down before seeing the message box or area to type.
+
+Also on mobile, the rearrangement for channels is not working properly - when dragged, it does not stay where I put it.
+
+Also, when the channels are dragged, they should stay there even when the page is reloaded or when the user logs out and logs in back. Also, new channels should be added to the bottom (stacked at the bottom) not the top.
+
+Also, the pin feature isn't working. It shows failed to toggle pin or workspace id required or some other error.
+
+See some errors from the browser console:
+
+Failed to load resource: the server responded with a status of 404 (Not Found)
+Dashboard.jsx:326 Error fetching my requests: AxiosError: Request failed with status code 404
+    at settle (settle.js:20:7)
+    at XMLHttpRequest.onloadend (xhr.js:62:9)
+(anonymous) @ Dashboard.jsx:326
+Dashboard.jsx:154 Socket connected
+:5000/api/channels/requests/me?workspaceId=69fa26a90f308b6941321c09:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+Dashboard.jsx:326 Error fetching my requests: AxiosError: Request failed with status code 404
+    at settle (settle.js:20:7)
+    at XMLHttpRequest.onloadend (xhr.js:62:9)
+(anonymous) @ Dashboard.jsx:326
+:5000/api/channels/requests/me?workspaceId=69fa26a90f308b6941321c09:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+Dashboard.jsx:326 Error fetching my requests: AxiosError: Request failed with status code 404
+    at settle (settle.js:20:7)
+    at XMLHttpRequest.onloadend (xhr.js:62:9)
+(anonymous) @ Dashboard.jsx:326
+:5000/api/channels/requests/me?workspaceId=69fa26a90f308b6941321c09:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+Dashboard.jsx:326 Error fetching my requests: AxiosError: Request failed with status code 404
+    at settle (settle.js:20:7)
+    at XMLHttpRequest.onloadend (xhr.js:62:9)
+(anonymous) @ Dashboard.jsx:326
+:5000/api/channels/69fb521a24c5a3fc9768089a/pin:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+
 
 
 Prompt 4

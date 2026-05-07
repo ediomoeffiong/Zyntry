@@ -38,8 +38,8 @@ exports.register = async (req, res, next) => {
       }
     }
 
-    // Check for existing active email
-    const existingUserByEmail = await User.findOne({ email, accountStatus: { $ne: 'permanently_deleted' } });
+    // Check for existing email (reserve it even if deleted)
+    const existingUserByEmail = await User.findOne({ email });
     if (existingUserByEmail) {
       return res.status(400).json({ message: 'Email already in use. Please try another.' });
     }
