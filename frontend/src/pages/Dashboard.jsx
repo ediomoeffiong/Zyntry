@@ -1944,15 +1944,15 @@ const Dashboard = () => {
                               height: '8px',
                               borderRadius: '50%',
                               border: '1.5px solid var(--bg-sidebar)',
-                              backgroundColor: ch.participants?.find(p => p._id !== user.id)?.status === 'online' ? '#10b981' : 'transparent',
-                              boxShadow: ch.participants?.find(p => p._id !== user.id)?.status === 'away' ? 'inset 0 0 0 1.5px var(--text-secondary)' : 'none',
+                              backgroundColor: ch.participants?.find(p => p._id !== user?.id && p._id !== user?._id)?.status === 'online' ? '#10b981' : 'transparent',
+                              boxShadow: ch.participants?.find(p => p._id !== user?.id && p._id !== user?._id)?.status === 'away' ? 'inset 0 0 0 1.5px var(--text-secondary)' : 'none',
                               pointerEvents: 'none'
                             }}></div>
                           )}
                         </div>
                         <span style={{ fontSize: '0.95rem' }}>{getChannelDisplayName(ch)}</span>
-                        {ch.isDirectMessage && ch.participants?.find(p => p._id !== user.id)?.customStatus?.emoji && (
-                          <span title={ch.participants.find(p => p._id !== user.id).customStatus.text} style={{ fontSize: '0.8rem' }}>{ch.participants.find(p => p._id !== user.id).customStatus.emoji}</span>
+                        {ch.isDirectMessage && ch.participants?.find(p => p._id !== user?.id && p._id !== user?._id)?.customStatus?.emoji && (
+                          <span title={ch.participants.find(p => p._id !== user?.id && p._id !== user?._id).customStatus.text} style={{ fontSize: '0.8rem' }}>{ch.participants.find(p => p._id !== user?.id && p._id !== user?._id).customStatus.emoji}</span>
                         )}
                       </div>
                       <button
