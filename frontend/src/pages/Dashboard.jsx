@@ -2090,6 +2090,158 @@ const Dashboard = () => {
             </div>
           </div>
         ) : (
+          selectedChannel ? (
+            <>
+              <header className="chat-header">
+                <button
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                </button>
+
+                <div className="hidden-mobile" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div
+                    onClick={() => setIsSearching(true)}
+                    style={{
+                      width: '100%',
+                      maxWidth: '400px',
+                      backgroundColor: 'rgba(255,255,255,0.05)',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--glass-border)',
+                      color: 'var(--text-secondary)',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      transition: 'var(--transition)'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                  >
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <span>Search {workspaceDetails?.name || 'Workspace'}...</span>
+                    <span style={{ marginLeft: 'auto', fontSize: '0.7rem', opacity: 0.5, border: '1px solid var(--glass-border)', padding: '2px 6px', borderRadius: '4px' }}>Ctrl + G</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <h2 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-primary)' }}>
+                    {activeChannelObj?.isDirectMessage ? '@' : '#'} {getChannelDisplayName(activeChannelObj)}
+                  </h2>
+                  {activeChannelObj?.isDirectMessage && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: activeChannelObj.participants?.find(p => p._id !== user.id)?.status === 'online' ? '#10b981' : 'transparent',
+                        boxShadow: activeChannelObj.participants?.find(p => p._id !== user.id)?.status === 'away' ? 'inset 0 0 0 1.5px var(--text-secondary)' : 'none'
+                      }}></div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        {activeChannelObj.participants?.find(p => p._id !== user.id)?.status || 'offline'}
+                      </span>
+                      {activeChannelObj.participants?.find(p => p._id !== user.id)?.customStatus?.text && (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: '4px', opacity: 0.8 }}>
+                          | {activeChannelObj.participants.find(p => p._id !== user.id).customStatus.emoji} {activeChannelObj.participants.find(p => p._id !== user.id).customStatus.text}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ position: 'relative' }}>
+                  </div>
+
+                  <div
+                    onClick={() => setIsInfoSidebarOpen(!isInfoSidebarOpen)}
+                    style={{ background: 'transparent', border: 'none', color: isInfoSidebarOpen ? 'var(--primary-color)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '4px' }}
+                    title="Show Info"
+                  >
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </div>
+                </div>
+              </header>
+
+              <div className="message-list">
+                {isLoadingMessages ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <div className="spinner" style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--primary-color)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                      Loading messages...
+                    </div>
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 20px', textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.01)', borderRadius: '24px', margin: '20px 0', border: '1px solid var(--glass-border)', flexShrink: 0 }}>
+                    <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+                      <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A10.003 10.003 0 0012 3a10.003 10.003 0 00-6.237 2.152l-.053.09m15.357 10.28l-.054.09A10.003 10.003 0 0112 21a10.003 10.003 0 01-6.237-2.152l-.053-.09L12 11z" /></svg>
+                    </div>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: '400', fontStyle: 'italic', color: 'var(--text-primary)', maxWidth: '450px', lineHeight: '1.8', marginBottom: '16px', fontFamily: '"Outfit", sans-serif' }}>
+                      &ldquo;The people who are crazy enough to think they can change the world are the ones who do.&rdquo;
+                    </h3>
+                    <div style={{ width: '40px', height: '2px', backgroundColor: 'var(--primary-color)', margin: '16px 0' }}></div>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Steve Jobs</p>
+                  </div>
+                ) : (
+                  messages.map((msg, index) => {
+                    const isOwn = msg.sender?._id === user?.id;
+                    const prevMsg = messages[index - 1];
+                    const showHeader = !prevMsg || prevMsg.sender?._id !== msg.sender?._id;
+
+                    return (
+                      <div key={msg._id} style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'flex-start',
+                        gap: '12px',
+                        marginTop: showHeader ? '16px' : '2px',
+                        paddingLeft: isOwn ? '0' : '0',
+                        paddingRight: isOwn ? '0' : '0',
+                        justifyContent: isOwn ? 'flex-end' : 'flex-start'
+                      }}>
+                        {!isOwn && showHeader && (
+                          <div
+                            onClick={() => handleViewProfile(msg.sender?._id)}
+                            style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--primary-color)', flexShrink: 0, overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: 'white', fontSize: '0.8rem', transition: 'var(--transition)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                          >
+                            {msg.sender?.profilePicture ? (
+                              <img src={msg.sender.profilePicture} alt={msg.sender.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              msg.sender?.username?.[0]?.toUpperCase()
+                            )}
+                          </div>
+                        )}
+                        {!isOwn && !showHeader && <div style={{ width: '36px', flexShrink: 0 }} />}
+
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: isOwn ? 'flex-end' : 'flex-start',
+                          maxWidth: isMobile ? '90%' : '75%'
+                        }}>
+                          {showHeader && (
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px', padding: '0 4px' }}>
+                              <span
+                                onClick={() => !isOwn && handleViewProfile(msg.sender?._id)}
+                                style={{ fontSize: '0.8rem', fontWeight: '700', color: isOwn ? 'var(--primary-color)' : 'var(--text-primary)', cursor: isOwn ? 'default' : 'pointer' }}
+                              >
+                                {isOwn ? 'You' : msg.sender?.username}
+                              </span>
+                              <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', opacity: 0.6 }}>
+                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          )}
+                          <div style={{
+                            padding: '10px 16px',
+                            borderRadius: '12px',
+                            borderTopRightRadius: isOwn && showHeader ? '2px' : '12px',
+                            borderTopLeftRadius: !isOwn && showHeader ? '2px' : '12px',
+                            backgroundColor: isOwn ? 'var(--primary-color)' : 'var(--bg-card)',
                             color: isOwn ? 'white' : 'var(--text-primary)',
                             fontSize: '0.95rem',
                             lineHeight: '1.4',
