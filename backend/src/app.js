@@ -144,10 +144,12 @@ if (!process.env.VERCEL) {
     socket.join(socket.user.id);
 
     socket.on('join_channel', (channelId) => {
-      // Leave previous rooms if any (except its own id room)
+      // Leave previous rooms if any (except its own id, user id and workspace rooms)
       const rooms = Array.from(socket.rooms);
       rooms.forEach(room => {
-        if (room !== socket.id) socket.leave(room);
+        if (room !== socket.id && room !== socket.user.id && !room.startsWith('workspace_')) {
+          socket.leave(room);
+        }
       });
 
       socket.join(channelId);

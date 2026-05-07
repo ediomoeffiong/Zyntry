@@ -60,6 +60,8 @@ const Dashboard = () => {
   const [isSearchingEmail, setIsSearchingEmail] = useState(false);
   const [foundWorkspaces, setFoundWorkspaces] = useState([]);
   const [isInfoSidebarOpen, setIsInfoSidebarOpen] = useState(false);
+  const [editChannelName, setEditChannelName] = useState('');
+  const [editChannelDescription, setEditChannelDescription] = useState('');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isLeavingWorkspace, setIsLeavingWorkspace] = useState(false);
   const [leavePassword, setLeavePassword] = useState('');
@@ -77,10 +79,24 @@ const Dashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [genericConfirm, setGenericConfirm] = useState({
+    isOpen: false,
+    title: 'Confirm Action',
+    message: 'Are you sure you want to proceed?',
+    onConfirm: null,
+    confirmText: 'Confirm',
+    cancelText: 'Cancel',
+    isDanger: false,
+    showInput: false,
+    inputValue: '',
+    inputPlaceholder: '',
+    inputType: 'text'
+  });
 
-
-
-
+  const getApiUrl = () => window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000/api' 
+    : 'https://zyntry.onrender.com/api';
+  const apiBaseUrl = getApiUrl();
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
   const selectedChannelRef = useRef(null);
@@ -97,6 +113,14 @@ const Dashboard = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    const channel = channels.find(c => c._id === selectedChannel);
+    if (channel) {
+      setEditChannelName(channel.name || '');
+      setEditChannelDescription(channel.description || '');
+    }
+  }, [selectedChannel, channels]);
 
   // Stable socket management
   useEffect(() => {
@@ -197,9 +221,6 @@ const Dashboard = () => {
     if (!activeWorkspace) return;
     setIsLoadingChannels(true);
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/channels?workspaceId=${activeWorkspace}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -229,9 +250,6 @@ const Dashboard = () => {
   const fetchWorkspaces = async () => {
     setIsLoadingWorkspaces(true);
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/workspaces`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -256,9 +274,6 @@ const Dashboard = () => {
 
   const fetchUserInvites = async () => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/workspaces/invites/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -271,9 +286,6 @@ const Dashboard = () => {
   const fetchChannelRequests = async () => {
     if (!activeWorkspace) return;
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/channels/requests?workspaceId=${activeWorkspace}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -404,9 +416,6 @@ const Dashboard = () => {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       const res = await axios.post(`${apiBaseUrl}/workspaces/find`, { email: inviteEmail }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -451,9 +460,6 @@ const Dashboard = () => {
       const fetchMessages = async () => {
         setIsLoadingMessages(true);
         try {
-          const apiBaseUrl = window.location.hostname === 'localhost'
-            ? 'http://localhost:5000/api'
-            : 'https://zyntry.onrender.com/api';
           const res = await axios.get(`${apiBaseUrl}/messages/${selectedChannel}`, {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -475,7 +481,6 @@ const Dashboard = () => {
 
   const fetchNotifications = async () => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/notifications`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -491,7 +496,6 @@ const Dashboard = () => {
 
   const markNotificationAsRead = async (id) => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
       await axios.put(`${apiBaseUrl}/notifications/${id}/read`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -520,7 +524,6 @@ const Dashboard = () => {
 
   const handleNotificationClick = async (n) => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
       await axios.put(`${apiBaseUrl}/notifications/${n._id}/read`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -601,13 +604,29 @@ const Dashboard = () => {
     }
   };
 
+  const handleViewProfile = async (userId) => {
+    if (!userId) return;
+    try {
+      const res = await axios.get(`${getApiUrl()}/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setViewedUser(res.data);
+      setIsViewingProfile(true);
+    } catch (err) {
+      console.error('Error fetching user profile:', err);
+      // Fallback: search in local members if API fails
+      const localUser = workspaceDetails?.members?.find(m => m._id === userId);
+      if (localUser) {
+        setViewedUser(localUser);
+        setIsViewingProfile(true);
+      }
+    }
+  };
+
   const startDM = async (e) => {
     e.preventDefault();
     if (!dmSearchQuery.trim()) return;
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       const res = await axios.post(`${apiBaseUrl}/channels/dm`, {
         email: dmSearchQuery,
         workspaceId: activeWorkspace
@@ -632,9 +651,6 @@ const Dashboard = () => {
     e.preventDefault();
     if (!newChannelName.trim()) return;
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       const res = await axios.post(`${apiBaseUrl}/channels`, {
         name: newChannelName,
         description: newChannelDescription,
@@ -663,9 +679,6 @@ const Dashboard = () => {
   const fetchPublicChannels = async () => {
     setIsLoadingPublic(true);
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/channels/public?workspaceId=${activeWorkspace}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -682,9 +695,6 @@ const Dashboard = () => {
 
   const handleJoinPublicChannel = async (channelId) => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       const res = await axios.post(`${apiBaseUrl}/channels/${channelId}/join`, {}, {
         headers: { 
           Authorization: `Bearer ${token}`,
@@ -768,9 +778,6 @@ const Dashboard = () => {
     e.preventDefault();
     if (!newWorkspaceName.trim()) return;
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       const res = await axios.post(`${apiBaseUrl}/workspaces`, {
         name: newWorkspaceName,
         slug: newWorkspaceSlug,
@@ -792,9 +799,6 @@ const Dashboard = () => {
   const fetchPublicWorkspaces = async () => {
     setIsLoadingPublicWorkspaces(true);
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       const res = await axios.get(`${apiBaseUrl}/workspaces/all`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -808,9 +812,6 @@ const Dashboard = () => {
 
   const handleRequestToJoin = async (workspaceId) => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       await axios.post(`${apiBaseUrl}/workspaces/${workspaceId}/request`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -825,9 +826,6 @@ const Dashboard = () => {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       await axios.post(`${apiBaseUrl}/workspaces/${activeWorkspace}/invite`, {
         email: inviteEmail.includes('@') ? inviteEmail : undefined,
         username: !inviteEmail.includes('@') ? inviteEmail : undefined
@@ -849,9 +847,6 @@ const Dashboard = () => {
   const handleChannelRequest = async (requestId, action) => {
     setIsProcessingApproval(true);
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       await axios.post(`${apiBaseUrl}/channels/requests/${requestId}`, { action }, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -888,9 +883,6 @@ const Dashboard = () => {
 
   const handleToggleModerator = async (channelId, userId) => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       await axios.patch(`${apiBaseUrl}/channels/${channelId}/moderators`, { userId }, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -906,9 +898,6 @@ const Dashboard = () => {
 
   const handleSetMemberExpiry = async (channelId, userId, expiryDate) => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       await axios.patch(`${apiBaseUrl}/channels/${channelId}/members/${userId}/expiry`, { expiryDate }, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -925,9 +914,6 @@ const Dashboard = () => {
   const handleApproveRequest = async (userId) => {
     setIsProcessingApproval(true);
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       await axios.post(`${apiBaseUrl}/workspaces/${activeWorkspace}/approve`, { userId }, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -945,9 +931,6 @@ const Dashboard = () => {
   const handleRejectRequest = async (userId) => {
     setIsProcessingApproval(true);
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       await axios.post(`${apiBaseUrl}/workspaces/${activeWorkspace}/reject`, { userId }, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -964,9 +947,6 @@ const Dashboard = () => {
 
   const handleAcceptInvite = async (workspaceId) => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       await axios.post(`${apiBaseUrl}/workspaces/invite/accept`, { workspaceId }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -979,7 +959,6 @@ const Dashboard = () => {
 
   const handleUpdateRole = async (userId, role) => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
       await axios.put(`${apiBaseUrl}/workspaces/${activeWorkspace}/members/${userId}/role`, { role }, {
         headers: { Authorization: `Bearer ${token}`, 'x-workspace-id': activeWorkspace }
       });
@@ -990,38 +969,66 @@ const Dashboard = () => {
   };
 
   const handleRemoveMember = async (userId) => {
-    if (!window.confirm('Are you sure you want to remove this member?')) return;
+    setGenericConfirm({
+      isOpen: true,
+      title: 'Remove Member',
+      message: 'Are you sure you want to remove this member from the workspace?',
+      confirmText: 'Remove',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await axios.delete(`${getApiUrl()}/workspaces/${activeWorkspace}/members/${userId}`, {
+            headers: { Authorization: `Bearer ${token}`, 'x-workspace-id': activeWorkspace }
+          });
+          fetchWorkspaceDetails(activeWorkspace);
+          setSuccess('Member removed successfully');
+        } catch (err) {
+          setError(err.response?.data?.message || 'Failed to remove member');
+        }
+      }
+    });
+  };
+
+  const handleUpdateChannel = async (channelId) => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
-      await axios.delete(`${apiBaseUrl}/workspaces/${activeWorkspace}/members/${userId}`, {
+      await axios.put(`${apiBaseUrl}/channels/${channelId}`, {
+        name: editChannelName,
+        description: editChannelDescription
+      }, {
         headers: { Authorization: `Bearer ${token}`, 'x-workspace-id': activeWorkspace }
       });
-      fetchWorkspaceDetails(activeWorkspace);
+      setSuccess('Channel updated successfully');
+      fetchChannels();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to remove member');
+      setError(err.response?.data?.message || 'Failed to update channel');
     }
   };
 
   const handleDeleteWorkspace = async () => {
-    if (!window.confirm('WARNING: Are you sure you want to DELETE this entire workspace? This cannot be undone.')) return;
-    try {
-      const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
-      await axios.delete(`${apiBaseUrl}/workspaces/${activeWorkspace}`, {
-        headers: { Authorization: `Bearer ${token}`, 'x-workspace-id': activeWorkspace }
-      });
-      setActiveWorkspace(null);
-      localStorage.removeItem('activeWorkspace');
-      fetchWorkspaces();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete workspace');
-    }
+    setGenericConfirm({
+      isOpen: true,
+      title: 'Delete Workspace',
+      message: 'WARNING: Are you sure you want to DELETE this entire workspace? This cannot be undone and all data will be lost.',
+      confirmText: 'Delete Workspace',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await axios.delete(`${getApiUrl()}/workspaces/${activeWorkspace}`, {
+            headers: { Authorization: `Bearer ${token}`, 'x-workspace-id': activeWorkspace }
+          });
+          setSuccess('Workspace deleted successfully');
+          setActiveWorkspace(null);
+          localStorage.removeItem('activeWorkspace');
+          fetchWorkspaces();
+        } catch (err) {
+          setError(err.response?.data?.message || 'Failed to delete workspace');
+        }
+      }
+    });
   };
 
   const handleUpdateWorkspaceSettings = async () => {
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
       await axios.put(`${apiBaseUrl}/workspaces/${activeWorkspace}/settings`, {
         slug: editSlug,
         settings: {
@@ -1037,20 +1044,7 @@ const Dashboard = () => {
     }
   };
 
-  const handleViewProfile = async (userId) => {
-    try {
-      const apiBaseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5000/api'
-        : 'https://zyntry.onrender.com/api';
-      const res = await axios.get(`${apiBaseUrl}/users/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setViewedUser(res.data);
-      setIsViewingProfile(true);
-    } catch (err) {
-      setError('Failed to load user profile');
-    }
-  };
+
 
 
 
@@ -1089,21 +1083,28 @@ const Dashboard = () => {
   };
 
   const handleLeaveCurrentChannel = async (channelId) => {
-    if (!window.confirm('Are you sure you want to leave this channel?')) return;
-    try {
-      const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
-      await axios.post(`${apiBaseUrl}/channels/${channelId}/leave`, {}, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'x-workspace-id': activeWorkspace
+    setGenericConfirm({
+      isOpen: true,
+      title: 'Leave Channel',
+      message: 'Are you sure you want to leave this channel?',
+      confirmText: 'Leave',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await axios.post(`${getApiUrl()}/channels/${channelId}/leave`, {}, {
+            headers: { 
+              Authorization: `Bearer ${token}`,
+              'x-workspace-id': activeWorkspace
+            }
+          });
+          fetchChannels();
+          setSelectedChannel(null);
+          setSuccess('Left channel successfully');
+        } catch (err) {
+          setError(err.response?.data?.message || 'Failed to leave channel');
         }
-      });
-      fetchChannels();
-      setSelectedChannel(null);
-      setSuccess('Left channel successfully');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to leave channel');
-    }
+      }
+    });
   };
 
   return (
@@ -1710,10 +1711,12 @@ const Dashboard = () => {
 
                     {isNotificationOpen && (
                       <div style={{
-                        position: 'absolute',
-                        top: '100%',
-                        right: 0,
-                        width: isMobile ? '280px' : '320px',
+                        position: isMobile ? 'fixed' : 'absolute',
+                        top: isMobile ? '70px' : '100%',
+                        right: isMobile ? '16px' : '0',
+                        left: isMobile ? '16px' : 'auto',
+                        width: isMobile ? 'auto' : '320px',
+                        maxWidth: isMobile ? 'none' : '320px',
                         backgroundColor: 'var(--bg-card)',
                         borderRadius: '16px',
                         border: '1px solid var(--glass-border)',
@@ -1998,35 +2001,53 @@ const Dashboard = () => {
               {/* Info Sidebar (Inside Chat Area) */}
               {isInfoSidebarOpen && (
                 <div className={`info-sidebar ${isInfoSidebarOpen ? 'open' : ''}`}>
-                  <div style={{ padding: '20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Details</h3>
-                    <button onClick={() => setIsInfoSidebarOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
+                  <div style={{ padding: '0', borderBottom: '1px solid var(--glass-border)' }}>
+                    <div style={{ padding: '20px 20px 10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Details</h3>
+                      <button onClick={() => setIsInfoSidebarOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', padding: '0 20px' }}>
+                      <button 
+                        onClick={() => setInfoTab('members')}
+                        style={{ padding: '12px 16px', fontSize: '0.85rem', fontWeight: '700', border: 'none', background: 'transparent', color: infoTab === 'members' ? 'var(--primary-color)' : 'var(--text-secondary)', borderBottom: infoTab === 'members' ? '2px solid var(--primary-color)' : '2px solid transparent', cursor: 'pointer', transition: 'var(--transition)' }}
+                      >
+                        {activeChannelObj?.isDirectMessage ? 'Profile' : 'Members'}
+                      </button>
+                      <button 
+                        onClick={() => setInfoTab('settings')}
+                        style={{ padding: '12px 16px', fontSize: '0.85rem', fontWeight: '700', border: 'none', background: 'transparent', color: infoTab === 'settings' ? 'var(--primary-color)' : 'var(--text-secondary)', borderBottom: infoTab === 'settings' ? '2px solid var(--primary-color)' : '2px solid transparent', cursor: 'pointer', transition: 'var(--transition)' }}
+                      >
+                        Settings
+                      </button>
+                    </div>
                   </div>
 
                   <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-                    {/* Workspace Info (Always at the top of info sidebar) */}
-                    <div style={{ marginBottom: '32px' }}>
-                      <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Workspace</h4>
-                      <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--primary-color)', marginBottom: '4px' }}>{workspaceDetails?.name}</div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>{workspaceDetails?.slug}.zyntry.app</div>
-                        {workspaceDetails?.description && (
-                          <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.5', marginBottom: '16px' }}>{workspaceDetails.description}</p>
-                        )}
-                        <div style={{ display: 'grid', gap: '8px' }}>
-                          <div style={{ fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: 'var(--text-secondary)' }}>Members</span>
-                            <span style={{ fontWeight: '600' }}>{workspaceDetails?.members?.length || 0}</span>
-                          </div>
-                          <div style={{ fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: 'var(--text-secondary)' }}>Owner</span>
-                            <span style={{ fontWeight: '600' }}>{workspaceDetails?.createdBy === user?.id ? 'You' : workspaceDetails?.members?.find(m => m._id === workspaceDetails?.createdBy)?.username || 'Owner'}</span>
+                    {infoTab === 'members' ? (
+                      <>
+                        {/* Workspace Info (Always at the top of info sidebar) */}
+                        <div style={{ marginBottom: '32px' }}>
+                          <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Workspace</h4>
+                          <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                            <div style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--primary-color)', marginBottom: '4px' }}>{workspaceDetails?.name}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>{workspaceDetails?.slug}.zyntry.app</div>
+                            {workspaceDetails?.description && (
+                              <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.5', marginBottom: '16px' }}>{workspaceDetails.description}</p>
+                            )}
+                            <div style={{ display: 'grid', gap: '8px' }}>
+                              <div style={{ fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: 'var(--text-secondary)' }}>Members</span>
+                                <span style={{ fontWeight: '600' }}>{workspaceDetails?.members?.length || 0}</span>
+                              </div>
+                              <div style={{ fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: 'var(--text-secondary)' }}>Owner</span>
+                                <span style={{ fontWeight: '600' }}>{workspaceDetails?.createdBy === user?.id ? 'You' : workspaceDetails?.members?.find(m => m._id === workspaceDetails?.createdBy)?.username || 'Owner'}</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
 
                     {activeChannelObj?.isDirectMessage ? (
                       /* DM Info */
@@ -2121,7 +2142,10 @@ const Dashboard = () => {
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                        <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        <span 
+                                          onClick={() => handleViewProfile(member._id)}
+                                          style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                                        >
                                           {member.username}
                                         </span>
                                         {isTargetModerator && (
@@ -2158,8 +2182,16 @@ const Dashboard = () => {
                                         <button 
                                           onClick={(e) => { 
                                             e.stopPropagation(); 
-                                            const date = prompt("Enter expiry date (YYYY-MM-DD) or leave empty to clear:");
-                                            if (date !== null) handleSetMemberExpiry(activeChannelObj._id, member._id, date || null);
+                                            setGenericConfirm({
+                                              isOpen: true,
+                                              title: 'Set Expiry Date',
+                                              message: 'Enter expiry date for this member (or leave empty to clear):',
+                                              showInput: true,
+                                              inputType: 'date',
+                                              inputValue: '',
+                                              confirmText: 'Set Expiry',
+                                              onConfirm: (date) => handleSetMemberExpiry(activeChannelObj._id, member._id, date || null)
+                                            });
                                           }}
                                           title="Set Expiry"
                                           style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
@@ -2167,7 +2199,17 @@ const Dashboard = () => {
                                           <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                         </button>
                                         <button 
-                                          onClick={(e) => { e.stopPropagation(); if (confirm("Remove user from channel?")) handleRemoveChannelMember(activeChannelObj._id, member._id); }}
+                                          onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            setGenericConfirm({
+                                              isOpen: true,
+                                              title: 'Remove Member',
+                                              message: 'Are you sure you want to remove this user from the channel?',
+                                              confirmText: 'Remove',
+                                              isDanger: true,
+                                              onConfirm: () => handleRemoveChannelMember(activeChannelObj._id, member._id)
+                                            });
+                                          }}
                                           title="Remove User"
                                           style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
                                         >
@@ -2184,15 +2226,13 @@ const Dashboard = () => {
                             <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--glass-border)' }}>
                               <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Conversation Settings</h4>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                {!activeChannelObj?.isDirectMessage && (
-                                  <button
-                                    onClick={() => handleLeaveCurrentChannel(activeChannelObj._id)}
-                                    style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                                  >
-                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                                    Leave Channel
-                                  </button>
-                                )}
+                                <button
+                                  onClick={() => { setChannelToLeave(activeChannelObj._id); setIsConfirmingLeave(true); }}
+                                  style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                >
+                                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                                  {activeChannelObj?.isDirectMessage ? 'Close DM' : 'Leave Channel'}
+                                </button>
                                 <button
                                   style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                 >
@@ -2205,9 +2245,82 @@ const Dashboard = () => {
                         </div>
                       </div>
                     )}
-                  </div>
-                </div>
-              )}
+                  </>
+                ) : (
+                          /* Settings Tab Content */
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            <div>
+                              <h4 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '16px' }}>Conversation Settings</h4>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {(activeChannelObj?.isDirectMessage) ? (
+                                  <>
+                                    <button 
+                                      style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px' }}
+                                    >
+                                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                      Clear Message History
+                                    </button>
+                                    <button 
+                                      style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px' }}
+                                    >
+                                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                      Block User
+                                    </button>
+                                  </>
+                                ) : (
+                                  /* Channel Management (Admins & Moderators) */
+                                  <>
+                                    {(workspaceDetails?.createdBy === (user?.id || user?._id) || activeChannelObj?.moderators?.some(m => (m._id || m) === (user?.id || user?._id))) && (
+                                      <>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                          <label style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Channel Name</label>
+                                          <input 
+                                            type="text" 
+                                            value={editChannelName}
+                                            onChange={(e) => setEditChannelName(e.target.value)}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none', fontSize: '0.9rem' }}
+                                          />
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                          <label style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Description</label>
+                                          <textarea 
+                                            value={editChannelDescription}
+                                            onChange={(e) => setEditChannelDescription(e.target.value)}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none', fontSize: '0.9rem', minHeight: '80px', resize: 'vertical' }}
+                                          />
+                                        </div>
+                                        <button 
+                                          onClick={() => handleUpdateChannel(activeChannelObj._id)}
+                                          style={{ width: '100%', padding: '10px', background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem' }}
+                                        >
+                                          Update Channel
+                                        </button>
+                                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--glass-border)' }}>
+                                          <h5 style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: '700', marginBottom: '12px' }}>Danger Zone</h5>
+                                          <button 
+                                            style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                          >
+                                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            Archive Channel
+                                          </button>
+                                        </div>
+                                      </>
+                                    )}
+                                    <button
+                                      onClick={() => { setChannelToLeave(activeChannelObj._id); setIsConfirmingLeave(true); }}
+                                      style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                    >
+                                      Leave Channel
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
             </>
           ) : (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', textAlign: 'center', padding: '40px', backgroundColor: 'var(--bg-dark)' }}>
@@ -2707,7 +2820,6 @@ const Dashboard = () => {
                             onClick={async () => {
                               // Logic to start DM with this user
                               try {
-                                const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
                                 const res = await axios.post(`${apiBaseUrl}/channels/dm`, {
                                   email: u.email,
                                   workspaceId: activeWorkspace
@@ -3061,7 +3173,95 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* Leave Channel Confirmation Modal */}
+      {isConfirmingLeave && (
+        <div className="modal-overlay" style={{ zIndex: 6000 }}>
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ef4444' }}>
+                {channels.find(c => c._id === channelToLeave)?.isDirectMessage ? 'Close DM' : 'Leave Channel'}
+              </h2>
+              <button onClick={() => { setIsConfirmingLeave(false); setChannelToLeave(null); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div style={{ padding: '24px' }}>
+              <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.6' }}>
+                {channels.find(c => c._id === channelToLeave)?.isDirectMessage 
+                  ? "Are you sure you want to close this direct message? The history will be preserved if you reopen it later."
+                  : `Are you sure you want to leave #${channels.find(c => c._id === channelToLeave)?.name}? You will need to be re-approved to join again.`}
+              </p>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => { setIsConfirmingLeave(false); setChannelToLeave(null); }}
+                  style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}
+                >Cancel</button>
+                <button
+                  onClick={confirmLeaveChannel}
+                  style={{ flex: 1, padding: '12px', background: '#ef4444', border: 'none', color: 'white', borderRadius: '10px', fontWeight: '700', cursor: 'pointer' }}
+                >Confirm</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Generic Confirmation Modal */}
+      {genericConfirm.isOpen && (
+        <div className="modal-overlay" style={{ zIndex: 7000 }}>
+          <div className="modal-content" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: genericConfirm.isDanger ? '#ef4444' : 'var(--primary-color)' }}>
+                {genericConfirm.title}
+              </h2>
+              <button onClick={() => setGenericConfirm({ ...genericConfirm, isOpen: false })} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div style={{ padding: '24px' }}>
+              <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginBottom: genericConfirm.showInput ? '16px' : '24px', lineHeight: '1.6' }}>
+                {genericConfirm.message}
+              </p>
+              
+              {genericConfirm.showInput && (
+                <div style={{ marginBottom: '24px' }}>
+                  <input 
+                    type={genericConfirm.inputType || 'text'}
+                    value={genericConfirm.inputValue}
+                    onChange={(e) => setGenericConfirm({ ...genericConfirm, inputValue: e.target.value })}
+                    placeholder={genericConfirm.inputPlaceholder}
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none' }}
+                    autoFocus
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => setGenericConfirm({ ...genericConfirm, isOpen: false })}
+                  style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}
+                >
+                  {genericConfirm.cancelText || 'Cancel'}
+                </button>
+                <button
+                  onClick={async () => {
+                    if (genericConfirm.onConfirm) {
+                      await genericConfirm.onConfirm(genericConfirm.inputValue);
+                    }
+                    setGenericConfirm({ ...genericConfirm, isOpen: false });
+                  }}
+                  style={{ flex: 1, padding: '12px', background: genericConfirm.isDanger ? '#ef4444' : 'var(--primary-color)', border: 'none', color: 'white', borderRadius: '10px', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  {genericConfirm.confirmText || 'Confirm'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
+
   );
 };
 

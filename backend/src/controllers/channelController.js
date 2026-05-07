@@ -358,14 +358,18 @@ exports.getChannelRequests = async (req, res, next) => {
     const moderatedChannels = await Channel.find({ workspaceId, moderators: req.user._id });
     const moderatedChannelIds = moderatedChannels.map(c => c._id);
 
-    const requests = await Request.find({
+    const query = {
       workspaceId,
-      status: 'pending',
-      $or: [
-        { type: 'create_channel' }, // Admins see create requests
-        { channelId: { $in: moderatedChannelIds } } // Mods see join requests for their channels
-      ]
-    }).populate('requester', 'username email fullName profilePicture')
+      status: 'pending'
+    };
+
+    if (!isAdmin) {
+      query.$or = [
+        { channelId: { $in: moderatedChannelIds } }
+      ];
+    }
+
+    const requests = await Request.find(query).populate('requester', 'username email fullName profilePicture')
       .populate('channelId', 'name');
 
     // Filter so only admins see create requests
@@ -558,7 +562,23 @@ exports.toggleModerator = async (req, res, next) => {
       channel.moderators.push(userId);
     }
 
+    const isNowModerator = channel.moderators.includes(userId);
     await channel.save();
+
+    if (isNowModerator) {
+      try {
+        await createNotification(req.app, {
+          userId,
+          type: 'CHANNEL_MODERATOR_ADDED',
+          title: 'Moderator Status',
+          message: `You are now a moderator of #${channel.name}`,
+          metadata: { channelId: channel._id, workspaceId: channel.workspaceId }
+        });
+      } catch (notifErr) {
+        console.error('Failed to create moderator notification:', notifErr);
+      }
+    }
+
     res.json({ message: 'Moderator rights updated', moderators: channel.moderators });
   } catch (error) {
     next(error);

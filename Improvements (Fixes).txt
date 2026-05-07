@@ -3,11 +3,57 @@ Workspace Settings
 -> Should be able to invite users via link and get approved by admin or moderator.
 
 
+Prompt 5
+
+Enable "Clear Message History" to work. Let it first show a confirmation popup first. Remember it should not use the browser's native popup.
+Do the same for the "Block" button and make it to also change to unblock and do the same.
+
+Users does not seem to be able to leave a workspace. There is no place, function, or feature for that. Fix it. Also, make sure there is a leave request which must be approved by the workspace admin or moderator before the user is allowed to leave.
+
+Also, the notification button does not seem to be showing when there is no workspace. i.e. for new users. Fix that.
+
+Let the default status be "online" not offline.
+
+
+
+Prompt 6
+
+Also, allow users to be able to delete their account in their settings. Include two options "Deactivate" and "Delete". Deactivate just shuts down their account and mandate them to activate it back during login while retaining all their information. If the user selects "Delete", the system waits for 30 days and then deletes all their information. There should be appropriate warning and instructions for these. If the user deletes their account and log in within the duration of 30 days, they are given the option to "Restore" their account which brings their account back to live and stops it or their information from deleting after 30 days. Also, the same username should not be allowed for any other user even after all their information has been deleted - this stops any form of fraud. However, the same email can be used after the information has been wiped out and if the same username tries to register but with the same email (as the previous account), then it should be allowed.
+
+Also, add the feature of instant delete, where the user instantly deletes their account and wipes all their information without the waiting of 30 days. This can be reversed within 24 hours (after which their whole information should be wiped out).
+
+
 Prompt 4
 
 Also, add individual settings for channels and even for direct messages. Channels settings should be different so even people who are just channel moderators can access the settings for channels. ***
 
 When I click leave channel, the dialog that comes up is the browser's native popup. Change that. ***
+
+Channel requests not working on production.
+
+Online / Offline status not working properly.
+
+Can't view other people's profile when their name is clicked. Fix this.
+
+There should be notifications for when you're made a moderator. A notification should also be sent to the admin and other mods that the particular person has been made to be a moderator.
+
+The notification panel when clicked is out of screen boundaries on mobile devices.
+
+The set expiry date pops up in a native browser popup. change it. Change everything that pops up in a native browser popup.
+
+The edit profile & status function isn't working. Throws error: 
+
+index-0nw3njL5.js:34 Uncaught TypeError: Cannot read properties of undefined (reading 'emoji')
+    at zs (index-0nw3njL5.js:34:21016)
+    at So (index-0nw3njL5.js:8:47495)
+    at mc (index-0nw3njL5.js:8:70006)
+    at jc (index-0nw3njL5.js:8:80269)
+    at Mu (index-0nw3njL5.js:8:115668)
+    at ku (index-0nw3njL5.js:8:114749)
+    at Ou (index-0nw3njL5.js:8:114587)
+    at gu (index-0nw3njL5.js:8:111452)
+    at ld (index-0nw3njL5.js:8:123102)
+    at id (index-0nw3njL5.js:8:121662)
 
 
 Prompt 3 - Done

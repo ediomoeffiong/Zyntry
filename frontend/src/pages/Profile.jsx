@@ -39,9 +39,8 @@ const Profile = () => {
     }
     
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
-        : 'https://zyntry.onrender.com/api';
+      const getApiUrl = () => window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
+      const apiBaseUrl = getApiUrl();
         
       const res = await axios.get(`${apiBaseUrl}/users/${currentUser.id}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -49,7 +48,8 @@ const Profile = () => {
       
       setProfile({
         ...res.data,
-        contact: res.data.contact || { phone: '', website: '' }
+        contact: res.data.contact || { phone: '', website: '' },
+        customStatus: res.data.customStatus || { text: '', emoji: '' }
       });
     } catch (err) {
       setError('Failed to load profile');
@@ -86,9 +86,8 @@ const Profile = () => {
     setSuccess(null);
     
     try {
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
-        : 'https://zyntry.onrender.com/api';
+      const getApiUrl = () => window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
+      const apiBaseUrl = getApiUrl();
         
       // 1. Update basic profile info
       await axios.put(`${apiBaseUrl}/users/profile`, {
@@ -202,7 +201,7 @@ const Profile = () => {
                 </div>
                 {profile.customStatus?.text && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: 'rgba(16, 185, 129, 0.08)', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                    {profile.customStatus.emoji && <span style={{ fontSize: '1.2rem' }}>{profile.customStatus.emoji}</span>}
+                    {profile.customStatus?.emoji && <span style={{ fontSize: '1.2rem' }}>{profile.customStatus.emoji}</span>}
                     <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>{profile.customStatus.text}</span>
                   </div>
                 )}
@@ -333,15 +332,15 @@ const Profile = () => {
                       <input 
                         type="text" 
                         placeholder="Emoji" 
-                        value={profile.customStatus.emoji} 
-                        onChange={(e) => setProfile(prev => ({ ...prev, customStatus: { ...prev.customStatus, emoji: e.target.value } }))}
+                        value={profile.customStatus?.emoji || ''} 
+                        onChange={(e) => setProfile(prev => ({ ...prev, customStatus: { ...(prev.customStatus || {}), emoji: e.target.value } }))}
                         style={{ width: '80px' }} 
                       />
                       <input 
                         type="text" 
                         placeholder="What's your status?" 
-                        value={profile.customStatus.text} 
-                        onChange={(e) => setProfile(prev => ({ ...prev, customStatus: { ...prev.customStatus, text: e.target.value } }))}
+                        value={profile.customStatus?.text || ''} 
+                        onChange={(e) => setProfile(prev => ({ ...prev, customStatus: { ...(prev.customStatus || {}), text: e.target.value } }))}
                         style={{ flex: 1 }} 
                       />
                     </div>
