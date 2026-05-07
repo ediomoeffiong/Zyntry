@@ -42,6 +42,24 @@ const workspaceSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Channel'
           }
+        ],
+        pinnedChannels: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Channel'
+          }
+        ],
+        channelOrder: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Channel'
+          }
+        ],
+        mutedChannels: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Channel'
+          }
         ]
       },
     ],

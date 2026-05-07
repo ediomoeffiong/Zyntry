@@ -195,10 +195,35 @@ const toggleBlockUser = async (req, res) => {
   }
 };
 
+// @desc    Update notification settings
+// @route   PUT /api/users/notification-settings
+// @access  Private
+const updateNotificationSettings = async (req, res) => {
+  try {
+    const { channelMessages, directMessages, mentions, requests } = req.body;
+    const user = await User.findById(req.user.id);
+    
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (!user.notificationSettings) user.notificationSettings = {};
+    
+    if (channelMessages !== undefined) user.notificationSettings.channelMessages = channelMessages;
+    if (directMessages !== undefined) user.notificationSettings.directMessages = directMessages;
+    if (mentions !== undefined) user.notificationSettings.mentions = mentions;
+    if (requests !== undefined) user.notificationSettings.requests = requests;
+
+    await user.save();
+    res.json(user.notificationSettings);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getUserProfile,
   updateProfile,
   updateStatus,
   updateCustomStatus,
   toggleBlockUser,
+  updateNotificationSettings
 };

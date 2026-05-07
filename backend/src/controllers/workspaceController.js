@@ -353,7 +353,9 @@ const getWorkspaceById = async (req, res) => {
         return {
           ...userObj,
           role: m.role,
-          allowedChannels: m.allowedChannels
+          allowedChannels: m.allowedChannels,
+          pinnedChannels: m.pinnedChannels,
+          channelOrder: m.channelOrder
         };
       }).filter(Boolean),
       pendingRequests: isOwner ? workspace.pendingRequests : [],
@@ -842,6 +844,35 @@ const handleLeaveRequest = async (req, res) => {
   }
 };
 
+// @desc    Toggle mute channel
+// @route   POST /api/workspaces/:workspaceId/channels/:channelId/mute
+// @access  Private
+const toggleMuteChannel = async (req, res) => {
+  try {
+    const workspace = await Workspace.findById(req.params.workspaceId);
+    if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
+
+    const member = workspace.members.find(m => m.user.toString() === req.user.id);
+    if (!member) return res.status(400).json({ message: 'Not a member of this workspace' });
+
+    if (!member.mutedChannels) member.mutedChannels = [];
+
+    const channelId = req.params.channelId;
+    const isMuted = member.mutedChannels.includes(channelId);
+
+    if (isMuted) {
+      member.mutedChannels = member.mutedChannels.filter(id => id.toString() !== channelId);
+    } else {
+      member.mutedChannels.push(channelId);
+    }
+
+    await workspace.save();
+    res.json({ message: isMuted ? 'Channel unmuted' : 'Channel muted', mutedChannels: member.mutedChannels });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createWorkspace,
   requestToJoinWorkspace,
@@ -862,4 +893,5 @@ module.exports = {
   deleteWorkspace,
   requestToLeaveWorkspace,
   handleLeaveRequest,
+  toggleMuteChannel
 };

@@ -195,10 +195,10 @@ if (!process.env.VERCEL) {
               mentionedUserIds.add(mentionedUser._id.toString());
               await createNotification(app, {
                 userId: mentionedUser._id,
-                type: 'MENTION',
+                type: 'CHANNEL_MENTION',
                 title: 'New Mention',
                 message: `${populatedMessage.sender.username} mentioned you in #${channel.name || 'channel'}`,
-                metadata: { channelId: channel._id, senderId: socket.user.id, senderName: populatedMessage.sender.username }
+                metadata: { channelId: channel._id, workspaceId: channel.workspaceId, senderId: socket.user.id, senderName: populatedMessage.sender.username }
               });
             }
           }
@@ -214,8 +214,22 @@ if (!process.env.VERCEL) {
               type: 'DIRECT_MESSAGE',
               title: 'New Message',
               message: `${populatedMessage.sender.username} sent you a message`,
-              metadata: { channelId: channel._id, senderId: socket.user.id, senderName: populatedMessage.sender.username }
+              metadata: { channelId: channel._id, workspaceId: channel.workspaceId, senderId: socket.user.id, senderName: populatedMessage.sender.username }
             });
+          }
+        } else {
+          // 3. Regular Channel Message Notification
+          for (const memberId of channel.members) {
+            const memberIdStr = memberId.toString();
+            if (memberIdStr !== socket.user.id && !mentionedUserIds.has(memberIdStr)) {
+              await createNotification(app, {
+                userId: memberId,
+                type: 'CHANNEL_MESSAGE',
+                title: `#${channel.name}`,
+                message: `${populatedMessage.sender.username}: ${trimmedText.substring(0, 50)}${trimmedText.length > 50 ? '...' : ''}`,
+                metadata: { channelId: channel._id, workspaceId: channel.workspaceId, senderId: socket.user.id, senderName: populatedMessage.sender.username }
+              });
+            }
           }
         }
       } catch (error) {

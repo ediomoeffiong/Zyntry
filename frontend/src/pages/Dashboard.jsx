@@ -93,6 +93,20 @@ const Dashboard = () => {
     inputType: 'text'
   });
 
+  // Pinning & Ordering State
+  const [pinnedChannels, setPinnedChannels] = useState([]);
+  const [channelOrder, setChannelOrder] = useState([]);
+  const [myPendingRequests, setMyPendingRequests] = useState([]); // Requests sent by current user
+  const [draggedChannel, setDraggedChannel] = useState(null);
+  const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
+  const [notificationSettings, setNotificationSettings] = useState({
+    channelMessages: true,
+    directMessages: true,
+    mentions: true,
+    requests: true
+  });
+  const [mutedChannels, setMutedChannels] = useState([]);
+
   const getApiUrl = () => window.location.hostname === 'localhost' 
     ? 'http://localhost:5000/api' 
     : 'https://zyntry.onrender.com/api';
@@ -298,7 +312,17 @@ const Dashboard = () => {
     }
   };
 
-
+  const fetchMyPendingRequests = async () => {
+    if (!activeWorkspace) return;
+    try {
+      const res = await axios.get(`${apiBaseUrl}/channels/requests/me?workspaceId=${activeWorkspace}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMyPendingRequests(res.data);
+    } catch (err) {
+      console.error('Error fetching my requests:', err);
+    }
+  };
 
   useEffect(() => {
     if (!token) {
@@ -307,6 +331,7 @@ const Dashboard = () => {
       fetchWorkspaces();
       fetchUserInvites();
       fetchNotifications();
+      fetchMyPendingRequests();
 
       // Handle invite links (?invite=slug)
       const params = new URLSearchParams(window.location.search);
@@ -437,8 +462,30 @@ const Dashboard = () => {
       setWorkspaceDetails(res.data);
       setEditSlug(res.data.slug || '');
       setEditDomain(res.data.settings?.allowedDomain || '');
+      
+      // Extract user preferences
+      const myMemberInfo = res.data.members.find(m => m._id === user?.id);
+      if (myMemberInfo) {
+        setPinnedChannels(myMemberInfo.pinnedChannels || []);
+        setChannelOrder(myMemberInfo.channelOrder || []);
+        setMutedChannels(myMemberInfo.mutedChannels || []);
+      }
     } catch (err) {
       console.error('Error fetching workspace details:', err);
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    if (!user?.id) return;
+    try {
+      const res = await axios.get(`${apiBaseUrl}/users/${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.notificationSettings) {
+        setNotificationSettings(res.data.notificationSettings);
+      }
+    } catch (err) {
+      console.error('Failed to fetch user profile:', err);
     }
   };
 
@@ -447,6 +494,7 @@ const Dashboard = () => {
       fetchNotifications();
       fetchWorkspaces();
       fetchUserInvites();
+      fetchUserProfile();
     }
   }, [token]);
 
@@ -455,6 +503,7 @@ const Dashboard = () => {
       fetchChannels();
       fetchWorkspaceDetails(activeWorkspace);
       fetchChannelRequests();
+      fetchMyPendingRequests();
       fetchNotifications(); // Refresh on workspace change too
       localStorage.setItem('activeWorkspace', activeWorkspace);
       setSelectedChannel(null); // Clear selection when workspace changes
@@ -540,13 +589,27 @@ const Dashboard = () => {
       setUnreadCount(prev => Math.max(0, prev - 1));
       
       // Navigate based on type
-      if (n.type.includes('CHANNEL')) {
+      if (n.type === 'DIRECT_MESSAGE') {
         if (n.metadata?.channelId) {
+          if (n.metadata.workspaceId && n.metadata.workspaceId !== activeWorkspace) {
+            setActiveWorkspace(n.metadata.workspaceId);
+          }
+          setSelectedChannel(n.metadata.channelId);
+          setIsNotificationOpen(false);
+          setIsInfoSidebarOpen(false);
+        }
+      } else if (n.type.includes('CHANNEL')) {
+        if (n.metadata?.channelId) {
+          if (n.metadata.workspaceId && n.metadata.workspaceId !== activeWorkspace) {
+            setActiveWorkspace(n.metadata.workspaceId);
+          }
           setSelectedChannel(n.metadata.channelId);
           setIsNotificationOpen(false);
           setIsInfoSidebarOpen(false);
         } else if (n.type.includes('REQUEST')) {
-          // Open workspace settings -> Requests tab
+          if (n.metadata?.workspaceId && n.metadata.workspaceId !== activeWorkspace) {
+            setActiveWorkspace(n.metadata.workspaceId);
+          }
           setSettingsTab('channelRequests');
           setIsWorkspaceSettingsOpen(true);
           setIsNotificationOpen(false);
@@ -555,10 +618,6 @@ const Dashboard = () => {
         if (n.metadata?.workspaceId) {
           setActiveWorkspace(n.metadata.workspaceId);
           setIsNotificationOpen(false);
-        } else if (n.type.includes('REQUEST')) {
-          setSettingsTab('channelRequests');
-          setIsWorkspaceSettingsOpen(true);
-          setIsNotificationOpen(false);
         }
       }
     } catch (err) {
@@ -566,6 +625,77 @@ const Dashboard = () => {
     }
   };
 
+  const togglePin = async (channelId) => {
+    try {
+      const res = await axios.patch(`${apiBaseUrl}/channels/${channelId}/pin`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPinnedChannels(res.data.pinnedChannels);
+      setSuccess(res.data.message);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to toggle pin');
+    }
+  };
+
+  const handleDragStart = (e, channelId) => {
+    setDraggedChannel(channelId);
+    e.dataTransfer.setData('channelId', channelId);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e, targetChannelId) => {
+    e.preventDefault();
+    const sourceChannelId = e.dataTransfer.getData('channelId');
+    if (sourceChannelId === targetChannelId) return;
+
+    // Logic to reorder
+    const currentChannels = getSortedChannels();
+    const newOrder = [...currentChannels.map(c => c._id)];
+    const sourceIndex = newOrder.indexOf(sourceChannelId);
+    const targetIndex = newOrder.indexOf(targetChannelId);
+
+    newOrder.splice(sourceIndex, 1);
+    newOrder.splice(targetIndex, 0, sourceChannelId);
+
+    setChannelOrder(newOrder);
+    
+    try {
+      await axios.patch(`${apiBaseUrl}/channels/reorder`, {
+        workspaceId: activeWorkspace,
+        channelOrder: newOrder
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (err) {
+      console.error('Failed to update channel order:', err);
+    }
+    setDraggedChannel(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedChannel(null);
+  };
+
+  const getSortedChannels = () => {
+    return [...channels].sort((a, b) => {
+      const aPinned = pinnedChannels.includes(a._id);
+      const bPinned = pinnedChannels.includes(b._id);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      
+      const aIndex = channelOrder.indexOf(a._id);
+      const bIndex = channelOrder.indexOf(b._id);
+      
+      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
+      
+      return 0;
+    });
+  };
 
   const onLogout = () => {
     removeToken();
@@ -797,7 +927,7 @@ const Dashboard = () => {
       
       if (res.status === 202) {
         setSuccess('Join request sent! Waiting for approval.');
-        setIsBrowsingChannels(false);
+        fetchMyPendingRequests();
       } else {
         await fetchChannels();
         setIsBrowsingChannels(false);
@@ -805,6 +935,42 @@ const Dashboard = () => {
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to join channel');
+    }
+  };
+
+  const handleCancelJoin = async (channelId) => {
+    try {
+      const res = await axios.post(`${apiBaseUrl}/channels/${channelId}/cancel-join`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSuccess(res.data.message);
+      fetchMyPendingRequests();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to cancel request');
+    }
+  };
+
+  const handleToggleMute = async (channelId) => {
+    try {
+      const res = await axios.post(`${apiBaseUrl}/workspaces/${activeWorkspace}/channels/${channelId}/mute`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMutedChannels(res.data.mutedChannels);
+      setSuccess(res.data.message);
+    } catch (err) {
+      setError('Failed to toggle mute status');
+    }
+  };
+
+  const handleUpdateNotificationSettings = async (settings) => {
+    try {
+      const res = await axios.put(`${apiBaseUrl}/users/notification-settings`, settings, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotificationSettings(res.data);
+      setSuccess('Notification settings updated');
+    } catch (err) {
+      setError('Failed to update notification settings');
     }
   };
 
@@ -1243,7 +1409,7 @@ const Dashboard = () => {
           padding: '12px 24px',
           borderRadius: '12px',
           boxShadow: 'var(--shadow-premium)',
-          zIndex: 2000,
+          zIndex: 9999,
           animation: 'fadeIn 0.3s ease-out',
           fontSize: '0.9rem',
           fontWeight: '500'
@@ -1263,7 +1429,7 @@ const Dashboard = () => {
           padding: '12px 24px',
           borderRadius: '12px',
           boxShadow: 'var(--shadow-premium)',
-          zIndex: 2000,
+          zIndex: 9999,
           animation: 'fadeIn 0.3s ease-out',
           fontSize: '0.9rem',
           fontWeight: '500'
@@ -1331,7 +1497,7 @@ const Dashboard = () => {
                 borderRadius: '16px',
                 border: '1px solid var(--glass-border)',
                 boxShadow: 'var(--shadow-premium)',
-                zIndex: 3000,
+                zIndex: 9999,
                 overflow: 'hidden',
                 animation: 'fadeIn 0.2s ease-out'
               }}>
@@ -1509,52 +1675,109 @@ const Dashboard = () => {
             {isLoadingChannels ? (
               <div style={{ padding: '0 16px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Loading...</div>
             ) : (
-              <ul style={{ listStyle: 'none', padding: 0, marginBottom: '24px' }}>
-                {channels.filter(ch => !ch.isDirectMessage).length === 0 ? (
-                  <li style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic' }}>No channels found</li>
-                ) : (
-                  channels.filter(ch => !ch.isDirectMessage).map(ch => (
-                    <li
-                      key={ch._id}
-                      onClick={() => joinChannel(ch._id)}
-                      className={`sidebar-item ${selectedChannel === ch._id ? 'sidebar-item-active' : ''}`}
-                      style={{
-                        padding: '10px 16px',
-                        cursor: 'pointer',
-                        color: selectedChannel === ch._id ? 'var(--primary-color)' : 'var(--text-secondary)',
-                        borderRadius: '8px',
-                        marginBottom: '4px',
-                        transition: 'var(--transition)',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                        <span style={{ marginRight: '12px', opacity: 0.5, fontSize: '1.1rem' }}>#</span>
-                        <span style={{ fontSize: '0.95rem' }}>{ch.name}</span>
-                      </div>
-                      <button
-                        onClick={(e) => handleLeaveChannel(e, ch._id)}
-                        className="cancel-btn"
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: 'var(--text-secondary)',
-                          cursor: 'pointer',
-                          padding: '4px',
-                          display: 'none',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          opacity: 0.6
-                        }}
-                        title="Unpin channel"
-                      >
-                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                      </button>
-                    </li>
-                  ))
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '24px' }}>
+                {/* Pinned Channels Section */}
+                {getSortedChannels().filter(ch => !ch.isDirectMessage && pinnedChannels.includes(ch._id)).length > 0 && (
+                  <div>
+                    <h5 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-secondary)', padding: '0 16px', marginBottom: '8px', opacity: 0.8 }}>Pinned</h5>
+                    <ul style={{ listStyle: 'none', padding: 0 }}>
+                      {getSortedChannels().filter(ch => !ch.isDirectMessage && pinnedChannels.includes(ch._id)).map(ch => (
+                        <li
+                          key={ch._id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, ch._id)}
+                          onDragOver={handleDragOver}
+                          onDragEnd={handleDragEnd}
+                          onDrop={(e) => handleDrop(e, ch._id)}
+                          onClick={() => joinChannel(ch._id)}
+                          className={`sidebar-item ${selectedChannel === ch._id ? 'sidebar-item-active' : ''}`}
+                          style={{
+                            padding: '8px 16px',
+                            cursor: 'pointer',
+                            color: selectedChannel === ch._id ? 'var(--primary-color)' : 'var(--text-secondary)',
+                            borderRadius: '8px',
+                            marginBottom: '2px',
+                            transition: 'var(--transition)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            opacity: draggedChannel === ch._id ? 0.5 : 1
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', flex: 1, overflow: 'hidden' }}>
+                            <span style={{ marginRight: '8px', opacity: 0.5 }}>#</span>
+                            <span style={{ fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ch.name}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); togglePin(ch._id); }}
+                              style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', opacity: 0.8 }}
+                              title="Unpin channel"
+                            >
+                              <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M16 9V4l1 0c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1l1 0v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg>
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
-              </ul>
+
+                {/* All Channels Section */}
+                <div>
+                  <ul style={{ listStyle: 'none', padding: 0 }}>
+                    {getSortedChannels().filter(ch => !ch.isDirectMessage && !pinnedChannels.includes(ch._id)).length === 0 && pinnedChannels.length === 0 ? (
+                      <li style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic' }}>No channels found</li>
+                    ) : (
+                      getSortedChannels().filter(ch => !ch.isDirectMessage && !pinnedChannels.includes(ch._id)).map(ch => (
+                        <li
+                          key={ch._id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, ch._id)}
+                          onDragOver={handleDragOver}
+                          onDragEnd={handleDragEnd}
+                          onDrop={(e) => handleDrop(e, ch._id)}
+                          onClick={() => joinChannel(ch._id)}
+                          className={`sidebar-item ${selectedChannel === ch._id ? 'sidebar-item-active' : ''}`}
+                          style={{
+                            padding: '8px 16px',
+                            cursor: 'pointer',
+                            color: selectedChannel === ch._id ? 'var(--primary-color)' : 'var(--text-secondary)',
+                            borderRadius: '8px',
+                            marginBottom: '2px',
+                            transition: 'var(--transition)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            opacity: draggedChannel === ch._id ? 0.5 : 1
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', flex: 1, overflow: 'hidden' }}>
+                            <span style={{ marginRight: '8px', opacity: 0.5 }}>#</span>
+                            <span style={{ fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ch.name}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); togglePin(ch._id); }}
+                              className="pin-btn"
+                              style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', display: 'none', alignItems: 'center', opacity: 0.5 }}
+                              title="Pin channel"
+                            >
+                              <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.414M15 11l-4.243 4.243m4.243-1.414l-4.243-4.243" /></svg>
+                            </button>
+                            <button
+                              onClick={(e) => handleLeaveChannel(e, ch._id)}
+                              className="cancel-btn"
+                              style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', display: 'none', alignItems: 'center', opacity: 0.6 }}
+                              title="Leave channel"
+                            >
+                              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                          </div>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              </div>
             )}
 
             {/* DMs Section */}
@@ -2345,10 +2568,27 @@ const Dashboard = () => {
                                   {activeChannelObj?.isDirectMessage ? 'Close DM' : 'Leave Channel'}
                                 </button>
                                 <button
-                                  style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                  onClick={() => handleToggleMute(activeChannelObj._id)}
+                                  style={{ 
+                                    width: '100%', 
+                                    padding: '10px', 
+                                    backgroundColor: mutedChannels.includes(activeChannelObj._id) ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.05)', 
+                                    color: mutedChannels.includes(activeChannelObj._id) ? 'var(--primary-color)' : 'var(--text-primary)', 
+                                    border: '1px solid ' + (mutedChannels.includes(activeChannelObj._id) ? 'rgba(16, 185, 129, 0.2)' : 'var(--glass-border)'), 
+                                    borderRadius: '10px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' 
+                                  }}
                                 >
-                                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                                  Mute Notifications
+                                  {mutedChannels.includes(activeChannelObj._id) ? (
+                                    <>
+                                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                                      Unmute Notifications
+                                    </>
+                                  ) : (
+                                    <>
+                                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                                      Mute Notifications
+                                    </>
+                                  )}
                                 </button>
                               </div>
                             </div>
@@ -2513,13 +2753,20 @@ const Dashboard = () => {
                       <div>
                         <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}># {ch.name}</span>
                       </div>
-                      <button
-                        onClick={() => {
-
-                          handleJoinPublicChannel(ch._id);
-                        }}
-                        style={{ padding: '8px 16px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
-                      >Join</button>
+                      {(() => {
+                        const hasPendingRequest = myPendingRequests.some(r => r.channelId === ch._id);
+                        return hasPendingRequest ? (
+                          <button
+                            onClick={() => handleCancelJoin(ch._id)}
+                            style={{ padding: '8px 16px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
+                          >Cancel</button>
+                        ) : (
+                          <button
+                            onClick={() => handleJoinPublicChannel(ch._id)}
+                            style={{ padding: '8px 16px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
+                          >Join</button>
+                        );
+                      })()}
                     </li>
                   ))}
                 </ul>
@@ -2747,6 +2994,15 @@ const Dashboard = () => {
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
                     >
                       <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    </button>
+                    <button 
+                      onClick={() => { setIsViewingProfile(false); setIsNotificationSettingsOpen(true); }}
+                      title="Notification Settings"
+                      style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', transition: 'var(--transition)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.3)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
+                    >
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
                     </button>
                     <button 
                       onClick={() => navigate('/profile')}
@@ -3014,12 +3270,22 @@ const Dashboard = () => {
           width: 0 !important;
           min-width: 0 !important;
         }
-        .sidebar-item:hover .cancel-btn {
+        .sidebar-item:hover .cancel-btn, .sidebar-item:hover .pin-btn {
           display: flex !important;
+        }
+        .pin-btn:hover {
+          color: var(--primary-color) !important;
+          opacity: 1 !important;
         }
         .cancel-btn:hover {
           color: #ef4444 !important;
           opacity: 1 !important;
+        }
+        .sidebar-item {
+          cursor: grab !important;
+        }
+        .sidebar-item:active {
+          cursor: grabbing !important;
         }
       `}</style>
       {/* Workspace Settings Modal */}
@@ -3369,6 +3635,73 @@ const Dashboard = () => {
                 >
                   {genericConfirm.confirmText || 'Confirm'}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Settings Modal */}
+      {isNotificationSettingsOpen && (
+        <div className="modal-overlay" style={{ zIndex: 6500 }} onClick={() => setIsNotificationSettingsOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--primary-color)' }}>Notification Settings</h3>
+              <button onClick={() => setIsNotificationSettingsOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Control which types of notifications you want to receive across Zyntry.</p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {[
+                  { key: 'channelMessages', label: 'Channel Messages', desc: 'Alerts for new messages in channels you belong to' },
+                  { key: 'directMessages', label: 'Direct Messages', desc: 'Alerts for private messages sent directly to you' },
+                  { key: 'mentions', label: 'Mentions & Replies', desc: 'Alerts when someone mentions you using @username' },
+                  { key: 'requests', label: 'Requests', desc: 'Alerts for workspace or channel join requests (if admin)' }
+                ].map(setting => (
+                  <div key={setting.key} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                    <div style={{ flex: 1, marginRight: '16px' }}>
+                      <div style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '2px' }}>{setting.label}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{setting.desc}</div>
+                    </div>
+                    <button
+                      onClick={() => handleUpdateNotificationSettings({ ...notificationSettings, [setting.key]: !notificationSettings[setting.key] })}
+                      style={{
+                        width: '40px',
+                        height: '22px',
+                        borderRadius: '11px',
+                        backgroundColor: notificationSettings[setting.key] ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)',
+                        border: 'none',
+                        position: 'relative',
+                        cursor: 'pointer',
+                        transition: '0.3s ease',
+                        marginTop: '4px'
+                      }}
+                    >
+                      <div style={{
+                        position: 'absolute',
+                        top: '2px',
+                        left: notificationSettings[setting.key] ? '20px' : '2px',
+                        width: '18px',
+                        height: '18px',
+                        borderRadius: '50%',
+                        backgroundColor: 'white',
+                        transition: '0.3s ease'
+                      }}></div>
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ marginTop: '12px', padding: '16px', backgroundColor: 'rgba(16, 185, 129, 0.05)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--primary-color)', flexShrink: 0 }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                    Tip: You can also mute specific channels by visiting the <strong>Channel Details</strong> sidebar.
+                  </p>
+                </div>
               </div>
             </div>
           </div>

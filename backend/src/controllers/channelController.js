@@ -617,3 +617,112 @@ exports.clearChannelHistory = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Get current user's pending requests in workspace
+// @route   GET /api/channels/requests/me
+// @access  Private
+exports.getUserRequests = async (req, res, next) => {
+  try {
+    const { workspaceId } = req.query;
+    if (!workspaceId) return res.status(400).json({ message: 'workspaceId is required' });
+
+    const requests = await Request.find({
+      workspaceId,
+      requester: req.user._id,
+      status: 'pending'
+    });
+
+    res.json(requests);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Cancel a pending join request
+// @route   POST /api/channels/:channelId/cancel-join
+// @access  Private
+exports.cancelJoinRequest = async (req, res, next) => {
+  try {
+    const request = await Request.findOneAndDelete({
+      type: 'join_channel',
+      requester: req.user._id,
+      channelId: req.params.channelId,
+      status: 'pending'
+    });
+
+    if (!request) {
+      return res.status(404).json({ message: 'No pending join request found' });
+    }
+
+    const io = req.app.get('io');
+    if (io) {
+      const channel = await Channel.findById(req.params.channelId);
+      if (channel) {
+        io.to(`workspace_${channel.workspaceId}`).emit('channel_request_update', { workspaceId: channel.workspaceId });
+      }
+    }
+
+    res.json({ message: 'Join request cancelled successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Toggle pin status for a channel
+// @route   PATCH /api/channels/:channelId/pin
+// @access  Private
+exports.togglePinChannel = async (req, res, next) => {
+  try {
+    const channel = await Channel.findById(req.params.channelId);
+    if (!channel) return res.status(404).json({ message: 'Channel not found' });
+
+    const workspace = await Workspace.findById(channel.workspaceId);
+    if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
+
+    const member = workspace.members.find(m => m.user.toString() === req.user._id.toString());
+    if (!member) return res.status(403).json({ message: 'Not a member of this workspace' });
+
+    if (!member.pinnedChannels) member.pinnedChannels = [];
+
+    const isPinned = member.pinnedChannels.some(id => id.toString() === channel._id.toString());
+
+    if (isPinned) {
+      member.pinnedChannels = member.pinnedChannels.filter(id => id.toString() !== channel._id.toString());
+    } else {
+      if (member.pinnedChannels.length >= 5) {
+        return res.status(400).json({ message: 'You can only pin up to 5 channels' });
+      }
+      member.pinnedChannels.push(channel._id);
+    }
+
+    await workspace.save();
+    res.json({ message: isPinned ? 'Channel unpinned' : 'Channel pinned', pinnedChannels: member.pinnedChannels });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update channel order
+// @route   PATCH /api/channels/reorder
+// @access  Private
+exports.updateChannelOrder = async (req, res, next) => {
+  try {
+    const { channelOrder, workspaceId } = req.body;
+    if (!workspaceId || !channelOrder) {
+      return res.status(400).json({ message: 'workspaceId and channelOrder are required' });
+    }
+
+    const workspace = await Workspace.findById(workspaceId);
+    if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
+
+    const member = workspace.members.find(m => m.user.toString() === req.user._id.toString());
+    if (!member) return res.status(403).json({ message: 'Not a member of this workspace' });
+
+    member.channelOrder = channelOrder;
+    await workspace.save();
+
+    res.json({ message: 'Channel order updated', channelOrder: member.channelOrder });
+  } catch (error) {
+    next(error);
+  }
+};

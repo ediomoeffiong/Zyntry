@@ -82,6 +82,12 @@ const userSchema = new mongoose.Schema(
       text: { type: String, trim: true, maxlength: 100 },
       emoji: { type: String, trim: true },
     },
+    notificationSettings: {
+      channelMessages: { type: Boolean, default: true },
+      directMessages: { type: Boolean, default: true },
+      mentions: { type: Boolean, default: true },
+      requests: { type: Boolean, default: true },
+    },
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   },
   {

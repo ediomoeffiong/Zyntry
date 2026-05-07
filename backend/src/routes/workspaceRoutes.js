@@ -20,6 +20,7 @@ const {
   deleteWorkspace,
   requestToLeaveWorkspace,
   handleLeaveRequest,
+  toggleMuteChannel
 } = require('../controllers/workspaceController');
 const { protect } = require('../middleware/authMiddleware');
 const { verifyWorkspaceMembership } = require('../middleware/workspaceMiddleware');
@@ -35,6 +36,7 @@ router.get('/invites/me', protect, getInvites);
 
 router.post('/:workspaceId/leave-request', protect, verifyWorkspaceMembership, requestToLeaveWorkspace);
 router.post('/:workspaceId/leave-requests/:requestId', protect, verifyWorkspaceMembership, handleLeaveRequest);
+router.post('/:workspaceId/channels/:channelId/mute', protect, verifyWorkspaceMembership, toggleMuteChannel);
 
 // Workspace specific routes
 router.route('/:workspaceId')

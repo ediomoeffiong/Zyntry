@@ -13,7 +13,11 @@ const {
   removeMember,
   setMemberExpiry,
   toggleModerator,
-  clearChannelHistory
+  clearChannelHistory,
+  getUserRequests,
+  cancelJoinRequest,
+  togglePinChannel,
+  updateChannelOrder
 } = require('../controllers/channelController');
 const { protect } = require('../middleware/authMiddleware');
 const { verifyWorkspaceMembership } = require('../middleware/workspaceMiddleware');
@@ -27,6 +31,7 @@ router.route('/')
 router.get('/public', verifyWorkspaceMembership, getPublicChannels);
 router.post('/dm', verifyWorkspaceMembership, getOrCreateDM);
 
+router.get('/requests/me', verifyWorkspaceMembership, getUserRequests);
 router.get('/requests', verifyWorkspaceMembership, getChannelRequests);
 router.post('/requests/:requestId', verifyWorkspaceMembership, handleChannelRequest);
 
@@ -38,5 +43,9 @@ router.delete('/:channelId/members/:userId', verifyWorkspaceMembership, removeMe
 router.patch('/:channelId/members/:userId/expiry', verifyWorkspaceMembership, setMemberExpiry);
 router.patch('/:channelId/moderators', verifyWorkspaceMembership, toggleModerator);
 router.delete('/:channelId/messages', verifyWorkspaceMembership, clearChannelHistory);
+
+router.post('/:channelId/cancel-join', verifyWorkspaceMembership, cancelJoinRequest);
+router.patch('/:channelId/pin', verifyWorkspaceMembership, togglePinChannel);
+router.patch('/reorder', verifyWorkspaceMembership, updateChannelOrder);
 
 module.exports = router;
