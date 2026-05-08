@@ -1542,17 +1542,15 @@ const Dashboard = () => {
 
             {isNotificationOpen && (
               <div className="notification-panel" style={{
-                position: 'fixed',
-                top: isMobile ? '16px' : 'auto',
-                bottom: isMobile ? 'auto' : '16px',
-                left: isMobile ? '16px' : '88px',
-                right: isMobile ? '16px' : 'auto',
-                width: isMobile ? 'calc(100vw - 32px)' : '350px',
+                position: 'absolute',
+                bottom: '60px',
+                left: isMobile ? '72px' : '80px',
+                width: isMobile ? 'calc(100vw - 88px)' : '350px',
                 backgroundColor: 'var(--bg-card)',
                 borderRadius: '16px',
                 border: '1px solid var(--glass-border)',
                 boxShadow: 'var(--shadow-premium)',
-                zIndex: 9999,
+                zIndex: 10000,
                 overflow: 'hidden',
                 animation: 'fadeIn 0.2s ease-out'
               }}>

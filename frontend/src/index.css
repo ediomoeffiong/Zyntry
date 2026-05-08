@@ -333,7 +333,7 @@ button {
     bottom: 0;
     transform: translateX(-100%);
     transition: var(--transition);
-    z-index: 1006;
+    z-index: 2000;
     /* Above sidebar */
   }
 
