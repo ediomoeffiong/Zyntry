@@ -1657,7 +1657,7 @@ const Dashboard = () => {
             )}
           </div>
 
-          <div style={{ padding: '16px', flex: 1, overflowY: 'auto' }}>
+          <div className="sidebar-scroll-region" style={{ padding: '16px', flex: 1, overflowY: 'auto' }}>
             {/* Owner Approval Section */}
             {workspaceDetails?.createdBy === user?.id && workspaceDetails?.pendingRequests?.length > 0 && (
               <div style={{ marginBottom: '24px', backgroundColor: 'rgba(16, 185, 129, 0.05)', borderRadius: '12px', padding: '12px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>

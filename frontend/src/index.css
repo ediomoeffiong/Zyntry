@@ -45,6 +45,12 @@ body {
   overscroll-behavior: none;
 }
 
+#root,
+.App {
+  height: 100%;
+  min-height: 0;
+}
+
 h1,
 h2,
 h3,
@@ -212,9 +218,8 @@ button {
 /* Dashboard Layout */
 .dashboard-container {
   display: flex;
-  height: 100vh;
-  min-height: 100vh;
   height: 100dvh;
+  min-height: 0;
   background-color: var(--bg-dark);
   color: var(--text-primary);
   overflow: hidden;
@@ -232,6 +237,8 @@ button {
   gap: 12px;
   z-index: 1002;
   flex-shrink: 0;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .mobile-sidebar {
@@ -245,6 +252,11 @@ button {
   overflow: hidden;
   position: relative;
   z-index: 1001;
+  min-height: 0;
+}
+
+.sidebar-scroll-region {
+  min-height: 0;
 }
 
 .main-content {
@@ -253,6 +265,8 @@ button {
   flex-direction: column;
   position: relative;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   background-color: var(--bg-dark);
 }
 
@@ -270,11 +284,18 @@ button {
 
 .message-list {
   flex: 1;
+  min-height: 0;
   padding: 24px;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overscroll-behavior: contain;
+}
+
+.message-list > * {
+  flex-shrink: 0;
 }
 
 .message-input-area {
@@ -337,12 +358,8 @@ button {
   }
 
   .chat-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    padding: env(safe-area-inset-top, 0px) 12px 0 12px;
-    height: calc(60px + env(safe-area-inset-top, 0px));
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 12px 12px;
+    min-height: calc(60px + env(safe-area-inset-top, 0px));
     gap: 12px;
     z-index: 1000;
     background-color: var(--bg-card);
@@ -354,7 +371,7 @@ button {
   }
 
   .main-content {
-    padding-top: calc(60px + env(safe-area-inset-top, 0px));
+    min-height: 0;
   }
 
   .message-list {
@@ -559,10 +576,4 @@ button {
     opacity: 1;
     transform: translateX(0);
   }
-}
-
-to {
-  opacity: 1;
-  transform: translateX(0);
-}
 }
