@@ -146,7 +146,7 @@ const Profile = () => {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-dark)', color: 'var(--text-primary)', padding: isMobile ? '20px 16px' : '40px 20px' }}>
+    <div className="profile-page-scroll" style={{ height: '100dvh', minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', backgroundColor: 'var(--bg-dark)', color: 'var(--text-primary)', padding: isMobile ? '20px 16px' : '40px 20px' }}>
       <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: 'var(--bg-card)', borderRadius: '24px', border: '1px solid var(--glass-border)', boxShadow: 'var(--shadow-premium)', overflow: 'hidden', width: '100%' }}>
         
         {/* Header/Back Button */}
