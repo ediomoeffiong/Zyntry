@@ -1540,61 +1540,7 @@ const Dashboard = () => {
               )}
             </button>
 
-            {isNotificationOpen && (
-              <div className="notification-panel" style={{
-                position: 'absolute',
-                bottom: '60px',
-                left: isMobile ? '72px' : '80px',
-                width: isMobile ? 'calc(100vw - 88px)' : '350px',
-                backgroundColor: 'var(--bg-card)',
-                borderRadius: '16px',
-                border: '1px solid var(--glass-border)',
-                boxShadow: 'var(--shadow-premium)',
-                zIndex: 10000,
-                overflow: 'hidden',
-                animation: 'fadeIn 0.2s ease-out'
-              }}>
-                <div style={{ padding: '16px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h4 style={{ fontSize: '0.9rem', fontWeight: '700' }}>Notifications</h4>
-                  <button
-                    onClick={markAllNotificationsAsRead}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
-                  >Mark all as read</button>
-                </div>
-                <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-                  {notifications.length === 0 ? (
-                    <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No notifications yet</div>
-                  ) : (
-                    notifications.map(n => (
-                      <div
-                        key={n._id}
-                        onClick={() => handleNotificationClick(n)}
-                        style={{
-                          padding: '16px',
-                          borderBottom: '1px solid var(--glass-border)',
-                          cursor: 'pointer',
-                          backgroundColor: n.isRead ? 'transparent' : 'rgba(16, 185, 129, 0.05)',
-                          transition: 'var(--transition)'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = n.isRead ? 'transparent' : 'rgba(16, 185, 129, 0.05)'}
-                      >
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                          <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" /></svg>
-                          </div>
-                          <div>
-                            <p style={{ fontSize: '0.85rem', fontWeight: '700', marginBottom: '2px' }}>{n.title}</p>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{n.message}</p>
-                            <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '8px', opacity: 0.6 }}>{new Date(n.createdAt).toLocaleDateString()} at {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
+
           </div>
         </div>
       </div>
@@ -1912,11 +1858,69 @@ const Dashboard = () => {
             {isLoadingChannels ? (
               <div style={{ padding: '0 16px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Loading...</div>
             ) : (
+              <>
+                {/* Pinned DMs Section */}
+                {getSortedChannels().filter(ch => ch.isDirectMessage && pinnedChannels.includes(ch._id)).length > 0 && (
+                  <div>
+                    <h5 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-secondary)', padding: '0 16px', marginBottom: '8px', opacity: 0.8 }}>Pinned DMs</h5>
+                    <ul style={{ listStyle: 'none', padding: 0 }}>
+                      {getSortedChannels().filter(ch => ch.isDirectMessage && pinnedChannels.includes(ch._id)).map(ch => (
+                        <li
+                          key={ch._id}
+                          onClick={() => joinChannel(ch._id)}
+                          className={`sidebar-item ${selectedChannel === ch._id ? 'sidebar-item-active' : ''}`}
+                          style={{
+                            padding: '10px 16px',
+                            cursor: 'pointer',
+                            color: selectedChannel === ch._id ? 'var(--primary-color)' : 'var(--text-secondary)',
+                            borderRadius: '8px',
+                            marginBottom: '4px',
+                            transition: 'var(--transition)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                            <div style={{ position: 'relative' }}>
+                              <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--primary-color)', opacity: selectedChannel === ch._id ? 1 : 0.4 }}></div>
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '-4px',
+                                right: '-4px',
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                border: '1.5px solid var(--bg-sidebar)',
+                                backgroundColor: ch.participants?.find(p => p._id !== user?.id && p._id !== user?._id)?.status === 'online' ? '#10b981' : 'transparent',
+                                boxShadow: ch.participants?.find(p => p._id !== user?.id && p._id !== user?._id)?.status === 'away' ? 'inset 0 0 0 1.5px var(--text-secondary)' : 'none',
+                                pointerEvents: 'none'
+                              }}></div>
+                            </div>
+                            <span style={{ fontSize: '0.95rem' }}>{getChannelDisplayName(ch)}</span>
+                            {ch.participants?.find(p => p._id !== user?.id && p._id !== user?._id)?.customStatus?.emoji && (
+                              <span title={ch.participants.find(p => p._id !== user?.id && p._id !== user?._id).customStatus.text} style={{ fontSize: '0.8rem' }}>{ch.participants.find(p => p._id !== user?.id && p._id !== user?._id).customStatus.emoji}</span>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); togglePin(ch._id); }}
+                              style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', opacity: 0.8 }}
+                              title="Unpin DM"
+                            >
+                              <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M16 9V4l1 0c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1l1 0v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z" /></svg>
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               <ul style={{ listStyle: 'none', padding: 0 }}>
-                {channels.filter(ch => ch.isDirectMessage).length === 0 ? (
+                {getSortedChannels().filter(ch => ch.isDirectMessage && !pinnedChannels.includes(ch._id)).length === 0 ? (
                   <li style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic' }}>No DMs yet</li>
                 ) : (
-                  channels.filter(ch => ch.isDirectMessage).map(ch => (
+                  getSortedChannels().filter(ch => ch.isDirectMessage && !pinnedChannels.includes(ch._id)).map(ch => (
                     <li
                       key={ch._id}
                       onClick={() => joinChannel(ch._id)}
@@ -1956,28 +1960,39 @@ const Dashboard = () => {
                           <span title={ch.participants.find(p => p._id !== user?.id && p._id !== user?._id).customStatus.text} style={{ fontSize: '0.8rem' }}>{ch.participants.find(p => p._id !== user?.id && p._id !== user?._id).customStatus.emoji}</span>
                         )}
                       </div>
-                      <button
-                        onClick={(e) => handleLeaveChannel(e, ch._id)}
-                        className="cancel-btn"
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: 'var(--text-secondary)',
-                          cursor: 'pointer',
-                          padding: '4px',
-                          display: 'none',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          opacity: 0.6
-                        }}
-                        title="Unpin chat"
-                      >
-                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                      </button>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); togglePin(ch._id); }}
+                          className="pin-btn"
+                          style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', display: 'none', alignItems: 'center', opacity: 0.5 }}
+                          title="Pin DM"
+                        >
+                          <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.414M15 11l-4.243 4.243m4.243-1.414l-4.243-4.243" /></svg>
+                        </button>
+                        <button
+                          onClick={(e) => handleLeaveChannel(e, ch._id)}
+                          className="cancel-btn"
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            display: 'none',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            opacity: 0.6
+                          }}
+                          title="Remove from sidebar"
+                        >
+                          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
                     </li>
                   ))
                 )}
               </ul>
+              </>
             )}
           </div>
 
@@ -3863,6 +3878,69 @@ const Dashboard = () => {
         </div>
       )}
 
+      {isNotificationOpen && (
+        <div className="notification-panel" style={{
+          position: 'fixed',
+          bottom: '24px',
+          left: '80px',
+          width: isMobile ? 'calc(100vw - 96px)' : '350px',
+          backgroundColor: 'var(--bg-card)',
+          borderRadius: '16px',
+          border: '1px solid var(--glass-border)',
+          boxShadow: 'var(--shadow-premium)',
+          zIndex: 10000,
+          overflow: 'hidden',
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div style={{ padding: '16px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h4 style={{ fontSize: '0.9rem', fontWeight: '700' }}>Notifications</h4>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <button
+                onClick={markAllNotificationsAsRead}
+                style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
+              >Mark all as read</button>
+              <button
+                onClick={() => setIsNotificationOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+              >
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+          </div>
+          <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+            {notifications.length === 0 ? (
+              <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No notifications yet</div>
+            ) : (
+              notifications.map(n => (
+                <div
+                  key={n._id}
+                  onClick={() => handleNotificationClick(n)}
+                  style={{
+                    padding: '16px',
+                    borderBottom: '1px solid var(--glass-border)',
+                    cursor: 'pointer',
+                    backgroundColor: n.isRead ? 'transparent' : 'rgba(16, 185, 129, 0.05)',
+                    transition: 'var(--transition)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = n.isRead ? 'transparent' : 'rgba(16, 185, 129, 0.05)'}
+                >
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
+                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: '600', marginBottom: '2px' }}>{n.title}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{n.message}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px', opacity: 0.6 }}>{new Date(n.createdAt).toLocaleString()}</div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
 
   );

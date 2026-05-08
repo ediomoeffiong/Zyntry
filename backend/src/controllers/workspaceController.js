@@ -75,6 +75,17 @@ const requestToJoinWorkspace = async (req, res) => {
     workspace.pendingRequests.push(req.user.id);
     await workspace.save();
 
+    const admins = workspace.members.filter(m => ['owner', 'admin'].includes(m.role));
+    for (const admin of admins) {
+      await createNotification(req.app, {
+        userId: admin.user,
+        type: 'WORKSPACE_JOIN_REQUEST',
+        title: 'New Workspace Join Request',
+        message: `${req.user.username} wants to join ${workspace.name}`,
+        metadata: { workspaceId: workspace._id, senderId: req.user.id, senderName: req.user.username }
+      });
+    }
+
     res.json({ message: 'Join request sent successfully', workspace });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -734,7 +745,6 @@ const requestToLeaveWorkspace = async (req, res) => {
     });
 
     // Notify admins
-    const { createNotification } = require('./notificationController');
     const admins = workspace.members.filter(m => ['owner', 'admin'].includes(m.role));
     for (const admin of admins) {
       if (admin.user.toString() !== req.user.id) {
