@@ -44,7 +44,7 @@ router.patch('/:channelId/members/:userId/expiry', verifyWorkspaceMembership, se
 router.patch('/:channelId/moderators', verifyWorkspaceMembership, toggleModerator);
 router.delete('/:channelId/messages', verifyWorkspaceMembership, clearChannelHistory);
 
-router.post('/:channelId/cancel-join', verifyWorkspaceMembership, cancelJoinRequest);
+router.post('/:channelId/cancel-join', cancelJoinRequest);
 router.patch('/:channelId/pin', verifyWorkspaceMembership, togglePinChannel);
 router.patch('/reorder', verifyWorkspaceMembership, updateChannelOrder);
 

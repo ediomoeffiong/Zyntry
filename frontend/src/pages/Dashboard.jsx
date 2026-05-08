@@ -953,7 +953,10 @@ const Dashboard = () => {
   const handleCancelJoin = async (channelId) => {
     try {
       const res = await axios.post(`${apiBaseUrl}/channels/${channelId}/cancel-join`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-workspace-id': activeWorkspace
+        }
       });
       setSuccess(res.data.message);
       fetchMyPendingRequests();
