@@ -3653,24 +3653,9 @@ const Dashboard = () => {
                     />
                     <button
                       type="button"
+                      className="password-toggle-btn"
                       onClick={() => setShowLeavePassword(!showLeavePassword)}
                       aria-label={showLeavePassword ? "Hide password" : "Show password"}
-                      style={{
-                        position: 'absolute',
-                        right: '10px',
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--text-secondary)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '4px',
-                        borderRadius: '6px',
-                        transition: 'color 0.2s'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
-                      onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
                     >
                       {showLeavePassword ? (
                         <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">

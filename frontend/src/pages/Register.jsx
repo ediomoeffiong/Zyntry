@@ -244,24 +244,9 @@ const Register = () => {
               />
               <button
                 type="button"
+                className="password-toggle-btn"
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '6px',
-                  borderRadius: '6px',
-                  transition: 'color 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
-                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
               >
                 {showPassword ? (
                   <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
