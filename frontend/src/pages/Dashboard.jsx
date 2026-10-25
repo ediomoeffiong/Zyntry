@@ -65,6 +65,7 @@ const Dashboard = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isLeavingWorkspace, setIsLeavingWorkspace] = useState(false);
   const [leavePassword, setLeavePassword] = useState('');
+  const [showLeavePassword, setShowLeavePassword] = useState(false);
   const [infoTab, setInfoTab] = useState('members'); // 'members' or 'settings'
   const [mentionSuggestions, setMentionSuggestions] = useState([]);
   const [mentionQuery, setMentionQuery] = useState('');
@@ -1388,6 +1389,7 @@ const Dashboard = () => {
 
       setIsLeavingWorkspace(false);
       setLeavePassword('');
+      setShowLeavePassword(false);
       setActiveWorkspace(null);
       setSuccess('Successfully left the workspace');
       fetchWorkspaces();
@@ -3044,6 +3046,36 @@ const Dashboard = () => {
                   </div>
                 )}
               </div>
+
+              {/* Available Public Workspaces */}
+              <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>Available Workspaces</h4>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Open workspaces you can request to join.</p>
+                {isLoadingPublicWorkspaces ? (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '12px 0' }}>Loading workspaces...</p>
+                ) : publicWorkspaces.length === 0 ? (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '12px 0' }}>No other public workspaces found.</p>
+                ) : (
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {publicWorkspaces.map(ws => (
+                      <li key={ws._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)' }}>
+                        <div>
+                          <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>{ws.name}</span>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                            {ws.members?.length || 0} members {ws.slug ? `• ${ws.slug}.zyntry.app` : ''}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleRequestToJoin(ws._id)}
+                          style={{ padding: '6px 12px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
+                        >
+                          Request Access
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -3599,7 +3631,7 @@ const Dashboard = () => {
           <div className="modal-content" style={{ maxWidth: '400px' }}>
             <div style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ef4444' }}>Leave Workspace</h2>
-              <button onClick={() => setIsLeavingWorkspace(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <button onClick={() => { setIsLeavingWorkspace(false); setShowLeavePassword(false); setLeavePassword(''); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -3610,19 +3642,53 @@ const Dashboard = () => {
               <form onSubmit={handleLeaveWorkspace}>
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>Password</label>
-                  <input
-                    type="password"
-                    value={leavePassword}
-                    onChange={(e) => setLeavePassword(e.target.value)}
-                    placeholder="Enter your password"
-                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none' }}
-                    required
-                  />
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type={showLeavePassword ? 'text' : 'password'}
+                      value={leavePassword}
+                      onChange={(e) => setLeavePassword(e.target.value)}
+                      placeholder="Enter your password"
+                      style={{ width: '100%', padding: '12px 42px 12px 12px', borderRadius: '10px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none' }}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLeavePassword(!showLeavePassword)}
+                      aria-label={showLeavePassword ? "Hide password" : "Show password"}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '4px',
+                        borderRadius: '6px',
+                        transition: 'color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                    >
+                      {showLeavePassword ? (
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <button
                     type="button"
-                    onClick={() => setIsLeavingWorkspace(false)}
+                    onClick={() => { setIsLeavingWorkspace(false); setShowLeavePassword(false); setLeavePassword(''); }}
                     style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}
                   >Cancel</button>
                   <button

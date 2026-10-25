@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Workspace = require('../models/Workspace');
 
 const verifyWorkspaceMembership = async (req, res, next) => {
@@ -13,6 +14,10 @@ const verifyWorkspaceMembership = async (req, res, next) => {
 
     if (!workspaceId) {
       return res.status(400).json({ message: 'Workspace ID is required' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(workspaceId)) {
+      return res.status(400).json({ message: 'Invalid Workspace ID' });
     }
     const workspace = await Workspace.findById(workspaceId);
 

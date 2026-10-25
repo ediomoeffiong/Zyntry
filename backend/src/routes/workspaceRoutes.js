@@ -29,10 +29,12 @@ router.route('/')
   .post(protect, createWorkspace)
   .get(protect, getUserWorkspaces);
 
+router.get('/all', protect, getAllWorkspaces);
 router.post('/find', protect, findWorkspacesByEmail);
 router.get('/lookup/:slug', protect, lookupWorkspaceBySlug);
 router.get('/search', protect, searchWorkspace);
 router.get('/invites/me', protect, getInvites);
+router.post('/invite/accept', protect, acceptInvite);
 
 router.post('/:workspaceId/leave-request', protect, verifyWorkspaceMembership, requestToLeaveWorkspace);
 router.post('/:workspaceId/leave-requests/:requestId', protect, verifyWorkspaceMembership, handleLeaveRequest);
@@ -44,7 +46,6 @@ router.route('/:workspaceId')
   .delete(protect, verifyWorkspaceMembership, deleteWorkspace);
 
 router.put('/:workspaceId/settings', protect, verifyWorkspaceMembership, updateSettings);
-router.post('/invite/accept', protect, acceptInvite);
 router.post('/:workspaceId/request', protect, requestToJoinWorkspace);
 router.post('/:workspaceId/invite', protect, verifyWorkspaceMembership, inviteUser);
 router.post('/:workspaceId/approve', protect, verifyWorkspaceMembership, approveRequest);

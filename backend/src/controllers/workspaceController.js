@@ -397,17 +397,36 @@ const getUserWorkspaces = async (req, res) => {
 // @access  Private
 const getAllWorkspaces = async (req, res) => {
   try {
-    const userDomain = req.user.email.split('@')[1].toLowerCase();
+    const userEmail = req.user?.email || '';
+    const userDomain = userEmail.includes('@') ? userEmail.split('@')[1].toLowerCase() : '';
+    const userId = req.user?._id || req.user?.id;
+
+    const allowedDomainConditions = [
+      { 'settings.allowedDomain': { $exists: false } },
+      { 'settings.allowedDomain': '' },
+      { 'settings.allowedDomain': null }
+    ];
+
+    if (userDomain) {
+      allowedDomainConditions.push({ 'settings.allowedDomain': userDomain });
+    }
+
     const workspaces = await Workspace.find({ 
-      'members.user': { $ne: req.user.id },
-      $or: [
-        { 'settings.allowedDomain': { $exists: false } },
-        { 'settings.allowedDomain': '' },
-        { 'settings.allowedDomain': userDomain }
-      ]
+      'members.user': { $ne: userId },
+      $or: allowedDomainConditions
     });
-    res.json(workspaces);
+
+    const unjoinedWorkspaces = workspaces.filter(ws => {
+      if (!ws.members || !Array.isArray(ws.members)) return true;
+      return !ws.members.some(m => {
+        const mId = m?.user ? m.user.toString() : m?.toString();
+        return mId === userId?.toString();
+      });
+    });
+
+    res.json(unjoinedWorkspaces);
   } catch (error) {
+    console.error('getAllWorkspaces error:', error);
     res.status(500).json({ message: error.message });
   }
 };
