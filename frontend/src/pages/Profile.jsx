@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getToken, getUser } from '../services/authService';
@@ -32,14 +32,14 @@ const Profile = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!token || !currentUser) {
       navigate('/login');
       return;
     }
     
     try {
-      const getApiUrl = () => window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
+      const getApiUrl = () => (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000/api' : 'https://zyntry.onrender.com/api';
       const apiBaseUrl = getApiUrl();
         
       const res = await axios.get(`${apiBaseUrl}/users/${currentUser.id}`, {
@@ -57,11 +57,11 @@ const Profile = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [token, currentUser, navigate]);
 
   useEffect(() => {
     fetchProfile();
-  }, []);
+  }, [fetchProfile]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

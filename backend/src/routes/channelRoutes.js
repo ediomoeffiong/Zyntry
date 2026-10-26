@@ -17,7 +17,8 @@ const {
   getUserRequests,
   cancelJoinRequest,
   togglePinChannel,
-  updateChannelOrder
+  updateChannelOrder,
+  updateChannel
 } = require('../controllers/channelController');
 const { protect } = require('../middleware/authMiddleware');
 const { verifyWorkspaceMembership } = require('../middleware/workspaceMiddleware');
@@ -37,6 +38,7 @@ router.post('/requests/:requestId', verifyWorkspaceMembership, handleChannelRequ
 
 router.post('/:channelId/join', verifyWorkspaceMembership, joinChannel); 
 router.post('/:channelId/leave', verifyWorkspaceMembership, leaveChannel);
+router.put('/:channelId', verifyWorkspaceMembership, updateChannel);
 router.delete('/:channelId', verifyWorkspaceMembership, deleteChannel);
 
 router.delete('/:channelId/members/:userId', verifyWorkspaceMembership, removeMember);

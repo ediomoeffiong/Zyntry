@@ -135,7 +135,7 @@ if (!process.env.VERCEL) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       socket.user = decoded; // Contains id and email
       next();
-    } catch (err) {
+    } catch {
       next(new Error('Authentication error: Invalid token'));
     }
   });
@@ -312,7 +312,7 @@ app.use((err, req, res, next) => {
   });
 
   // Intercept Mongoose buffering/selection/config timeout errors
-  if (message.includes('buffering timed out') || message.includes('selection timeout') || message.includes('Database configuration missing')) {
+  if (message && (message.includes('buffering timed out') || message.includes('selection timeout') || message.includes('Database configuration missing'))) {
     statusCode = 503;
     message = 'Service is temporarily unavailable. Please try again later.';
   }
@@ -336,8 +336,8 @@ if (!process.env.VERCEL) {
   });
 }
 
-process.on('unhandledRejection', (err, promise) => {
-  console.log(`Error: ${err.message}`);
+process.on('unhandledRejection', (err) => {
+  console.log(`Error: ${err?.message || err}`);
 });
 
 module.exports = app;

@@ -726,3 +726,41 @@ exports.updateChannelOrder = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Update a channel (name, description)
+// @route   PUT /api/channels/:channelId
+// @access  Private (Owner/Admin/Moderator)
+exports.updateChannel = async (req, res, next) => {
+  try {
+    const channel = await Channel.findById(req.params.channelId);
+
+    if (!channel) {
+      return res.status(404).json({ message: 'Channel not found' });
+    }
+
+    const isOwnerOrAdmin = ['owner', 'admin'].includes(req.workspaceRole);
+    const isModerator = channel.moderators && channel.moderators.some(m => m.toString() === req.user._id.toString());
+
+    if (!isOwnerOrAdmin && !isModerator) {
+      return res.status(403).json({ message: 'Only admins, owners, or moderators can update this channel' });
+    }
+
+    const { name, description } = req.body;
+    if (name) {
+      if (channel.name === 'general' && name.trim().toLowerCase() !== 'general') {
+        return res.status(400).json({ message: 'Cannot rename the general channel' });
+      }
+      channel.name = name.trim().toLowerCase().replace(/\s+/g, '-');
+    }
+    if (description !== undefined) {
+      channel.description = description;
+    }
+
+    await channel.save();
+
+    res.json(channel);
+  } catch (error) {
+    next(error);
+  }
+};
+

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { loginUser, setToken, getToken, logout } from '../services/authService';
 
@@ -9,15 +9,9 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated] = useState(() => !!getToken());
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (getToken()) {
-      setIsAuthenticated(true);
-    }
-  }, []);
 
   if (isAuthenticated) {
     return (
@@ -30,7 +24,6 @@ const Login = () => {
         padding: '20px'
       }}>
         <div className="animate-fade-in" style={{ 
-          width: '100%', 
           maxWidth: '440px', 
           width: 'min(440px, 100%)',
           background: 'var(--glass-bg)', 
@@ -121,7 +114,6 @@ const Login = () => {
       padding: '20px'
     }}>
       <div className="animate-fade-in" style={{ 
-        width: '100%', 
         maxWidth: '440px', 
         width: 'min(440px, 100%)',
         background: 'var(--glass-bg)', 

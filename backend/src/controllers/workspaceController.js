@@ -2,6 +2,7 @@ const Workspace = require('../models/Workspace');
 const User = require('../models/User');
 const Channel = require('../models/Channel');
 const { createNotification } = require('../utils/notifications');
+const bcrypt = require('bcrypt');
 
 // @desc    Create new workspace
 // @route   POST /api/workspaces
@@ -902,6 +903,67 @@ const toggleMuteChannel = async (req, res) => {
   }
 };
 
+// @desc    Directly leave workspace (requires password verification)
+// @route   POST /api/workspaces/:workspaceId/leave
+// @access  Private
+const leaveWorkspace = async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ message: 'Password is required to leave the workspace' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Incorrect password' });
+    }
+
+    const workspace = await Workspace.findById(req.params.workspaceId);
+    if (!workspace) {
+      return res.status(404).json({ message: 'Workspace not found' });
+    }
+
+    const targetMember = workspace.members.find(m => m.user.toString() === req.user.id);
+    if (!targetMember) {
+      return res.status(400).json({ message: 'You are not a member of this workspace' });
+    }
+
+    if (targetMember.role === 'owner') {
+      const ownerCount = workspace.members.filter(m => m.role === 'owner').length;
+      if (ownerCount <= 1) {
+        return res.status(400).json({ message: 'As the last owner, you cannot leave. Delete the workspace or transfer ownership first.' });
+      }
+    }
+
+    workspace.members = workspace.members.filter(m => m.user.toString() !== req.user.id);
+    workspace.auditLogs.push({
+      action: 'MEMBER_LEFT',
+      performedBy: req.user.id,
+      targetUser: req.user.id,
+      details: 'Member left workspace directly'
+    });
+    await workspace.save();
+
+    await User.findByIdAndUpdate(req.user.id, {
+      $pull: { workspaces: workspace._id }
+    });
+
+    await Channel.updateMany(
+      { workspaceId: workspace._id },
+      { $pull: { members: req.user.id, moderators: req.user.id } }
+    );
+
+    res.json({ message: 'Successfully left the workspace' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createWorkspace,
   requestToJoinWorkspace,
@@ -922,5 +984,6 @@ module.exports = {
   deleteWorkspace,
   requestToLeaveWorkspace,
   handleLeaveRequest,
-  toggleMuteChannel
+  toggleMuteChannel,
+  leaveWorkspace
 };

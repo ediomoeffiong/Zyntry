@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = window.location.hostname === 'localhost' 
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://localhost:5000/api/auth' 
   : 'https://zyntry.onrender.com/api/auth';
 
@@ -22,8 +22,12 @@ export const loginUser = async (userData) => {
 };
 
 export const getUser = () => {
-  const user = localStorage.getItem('user');
-  return user ? JSON.parse(user) : null;
+  try {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
+  } catch {
+    return null;
+  }
 };
 
 export const getToken = () => {

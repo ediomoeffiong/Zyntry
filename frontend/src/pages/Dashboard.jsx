@@ -7,7 +7,7 @@ import { io } from 'socket.io-client';
 const Dashboard = () => {
   const navigate = useNavigate();
   const token = getToken();
-  const user = getUser();
+  const [user, setUser] = useState(() => getUser());
 
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
@@ -140,6 +140,13 @@ const Dashboard = () => {
     }
   }, [selectedChannel, channels]);
 
+  const onLogout = () => {
+    removeToken();
+    localStorage.removeItem('user');
+    if (socketRef.current) socketRef.current.disconnect();
+    navigate('/login');
+  };
+
   // Stable socket management
   useEffect(() => {
     if (token && !socketRef.current) {
@@ -235,6 +242,20 @@ const Dashboard = () => {
     };
   }, [token]);
 
+  const joinChannel = (channelId) => {
+    if (socketRef.current) {
+      // Clear messages immediately to avoid bleed
+      setMessages([]);
+      setSelectedChannel(channelId);
+      socketRef.current.emit('join_channel', channelId);
+
+      // Auto-hide sidebar on mobile after selection
+      if (window.innerWidth <= 768) {
+        setIsSidebarOpen(false);
+      }
+    }
+  };
+
   const fetchChannels = async () => {
     if (!activeWorkspace) return;
     setIsLoadingChannels(true);
@@ -262,6 +283,21 @@ const Dashboard = () => {
       setError('Failed to load channels');
     } finally {
       setIsLoadingChannels(false);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await axios.get(`${apiBaseUrl}/notifications`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-workspace-id': activeWorkspace
+        }
+      });
+      setNotifications(res.data);
+      setUnreadCount(res.data.filter(n => !n.isRead).length);
+    } catch {
+      console.error('Failed to fetch notifications');
     }
   };
 
@@ -328,6 +364,30 @@ const Dashboard = () => {
     }
   };
 
+  const fetchUserProfile = async () => {
+    if (!user?.id) return;
+    try {
+      const res = await axios.get(`${apiBaseUrl}/users/${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.notificationSettings) {
+        setNotificationSettings(res.data.notificationSettings);
+      }
+
+      // Check Account Status
+      if (res.data.accountStatus && res.data.accountStatus !== 'active') {
+        setAccountInfo({
+          status: res.data.accountStatus,
+          deletionDate: res.data.deletionRequestDate,
+          type: res.data.deletionType
+        });
+        setIsAccountRestoreModalOpen(true);
+      }
+    } catch (err) {
+      console.error('Failed to fetch user profile:', err);
+    }
+  };
+
   useEffect(() => {
     if (!token) {
       navigate('/login');
@@ -335,7 +395,7 @@ const Dashboard = () => {
       fetchWorkspaces();
       fetchUserInvites();
       fetchNotifications();
-      fetchMyPendingRequests();
+      fetchUserProfile();
 
       // Handle invite links (?invite=slug)
       const params = new URLSearchParams(window.location.search);
@@ -426,7 +486,7 @@ const Dashboard = () => {
             headers: { Authorization: `Bearer ${token}` }
           });
           setWorkspacePreview(res.data);
-        } catch (err) {
+        } catch {
           // Silent fail for auto-lookup
         }
       };
@@ -443,7 +503,7 @@ const Dashboard = () => {
       });
       setFoundWorkspaces(res.data);
       setIsSearchingEmail(true);
-    } catch (err) {
+    } catch {
       setError('Failed to find workspaces');
     }
   };
@@ -468,39 +528,6 @@ const Dashboard = () => {
       console.error('Error fetching workspace details:', err);
     }
   };
-
-  const fetchUserProfile = async () => {
-    if (!user?.id) return;
-    try {
-      const res = await axios.get(`${apiBaseUrl}/users/${user.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.notificationSettings) {
-        setNotificationSettings(res.data.notificationSettings);
-      }
-
-      // Check Account Status
-      if (res.data.accountStatus && res.data.accountStatus !== 'active') {
-        setAccountInfo({
-          status: res.data.accountStatus,
-          deletionDate: res.data.deletionRequestDate,
-          type: res.data.deletionType
-        });
-        setIsAccountRestoreModalOpen(true);
-      }
-    } catch (err) {
-      console.error('Failed to fetch user profile:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (token) {
-      fetchNotifications();
-      fetchWorkspaces();
-      fetchUserInvites();
-      fetchUserProfile();
-    }
-  }, [token]);
 
   useEffect(() => {
     if (activeWorkspace) {
@@ -541,21 +568,6 @@ const Dashboard = () => {
     }
   }, [selectedChannel, token]);
 
-  const fetchNotifications = async () => {
-    try {
-      const res = await axios.get(`${apiBaseUrl}/notifications`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'x-workspace-id': activeWorkspace
-        }
-      });
-      setNotifications(res.data);
-      setUnreadCount(res.data.filter(n => !n.isRead).length);
-    } catch (err) {
-      console.error('Failed to fetch notifications');
-    }
-  };
-
   const markNotificationAsRead = async (id) => {
     try {
       await axios.put(`${apiBaseUrl}/notifications/${id}/read`, {}, {
@@ -563,7 +575,7 @@ const Dashboard = () => {
       });
       setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (err) {
+    } catch {
       console.error('Failed to mark notification as read');
     }
   };
@@ -586,11 +598,7 @@ const Dashboard = () => {
 
   const handleNotificationClick = async (n) => {
     try {
-      await axios.put(`${apiBaseUrl}/notifications/${n._id}/read`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setNotifications(prev => prev.map(notif => notif._id === n._id ? { ...notif, isRead: true } : notif));
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      markNotificationAsRead(n._id);
 
       // Navigate based on type
       if (n.type === 'DIRECT_MESSAGE') {
@@ -708,28 +716,6 @@ const Dashboard = () => {
       const dateB = new Date(b.createdAt || b.updatedAt || 0);
       return dateA - dateB;
     });
-  };
-
-  const onLogout = () => {
-    removeToken();
-    localStorage.removeItem('user');
-    if (socketRef.current) socketRef.current.disconnect();
-    navigate('/login');
-  };
-
-  const joinChannel = (channelId) => {
-
-    if (socketRef.current) {
-      // Clear messages immediately to avoid bleed
-      setMessages([]);
-      setSelectedChannel(channelId);
-      socketRef.current.emit('join_channel', channelId);
-
-      // Auto-hide sidebar on mobile after selection
-      if (window.innerWidth <= 768) {
-        setIsSidebarOpen(false);
-      }
-    }
   };
 
   const sendMessage = (e) => {
@@ -922,7 +908,7 @@ const Dashboard = () => {
         }
       });
       setPublicChannels(res.data);
-    } catch (err) {
+    } catch {
       setError('Failed to load public channels');
     } finally {
       setIsLoadingPublic(false);
@@ -973,7 +959,7 @@ const Dashboard = () => {
       });
       setMutedChannels(res.data.mutedChannels);
       setSuccess(res.data.message);
-    } catch (err) {
+    } catch {
       setError('Failed to toggle mute status');
     }
   };
@@ -987,7 +973,7 @@ const Dashboard = () => {
       });
       setNotificationSettings(res.data);
       setSuccess('Notification settings updated');
-    } catch (err) {
+    } catch {
       setError('Failed to update notification settings');
     }
   };
@@ -1122,7 +1108,7 @@ const Dashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPublicWorkspaces(res.data);
-    } catch (err) {
+    } catch {
       setError('Failed to load available workspaces');
     } finally {
       setIsLoadingPublicWorkspaces(false);
@@ -1398,31 +1384,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleLeaveCurrentChannel = async (channelId) => {
-    setGenericConfirm({
-      isOpen: true,
-      title: 'Leave Channel',
-      message: 'Are you sure you want to leave this channel?',
-      confirmText: 'Leave',
-      isDanger: true,
-      onConfirm: async () => {
-        try {
-          await axios.post(`${getApiUrl()}/channels/${channelId}/leave`, {}, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'x-workspace-id': activeWorkspace
-            }
-          });
-          fetchChannels();
-          setSelectedChannel(null);
-          setSuccess('Left channel successfully');
-        } catch (err) {
-          setError(err.response?.data?.message || 'Failed to leave channel');
-        }
-      }
-    });
-  };
-
   return (
     <div className="dashboard-container">
       {/* Mobile Sidebar Toggle (Floating if no workspace) */}
@@ -1497,16 +1458,20 @@ const Dashboard = () => {
 
       {/* Workspace Rail */}
       <div className={`workspace-rail ${isMobile && isSidebarOpen ? 'open' : ''}`}>
-        {workspaces.map(ws => (
-          <div
-            key={ws._id}
-            className={`workspace-icon ${activeWorkspace === ws._id ? 'workspace-icon-active' : ''}`}
-            onClick={() => setActiveWorkspace(ws._id)}
-            title={ws.name}
-          >
-            {ws.name.substring(0, 2).toUpperCase()}
-          </div>
-        ))}
+        {isLoadingWorkspaces && workspaces.length === 0 ? (
+          <div className="workspace-icon" style={{ opacity: 0.5, fontSize: '0.7rem' }}>...</div>
+        ) : (
+          workspaces.map(ws => (
+            <div
+              key={ws._id}
+              className={`workspace-icon ${activeWorkspace === ws._id ? 'workspace-icon-active' : ''}`}
+              onClick={() => setActiveWorkspace(ws._id)}
+              title={ws.name}
+            >
+              {ws.name.substring(0, 2).toUpperCase()}
+            </div>
+          ))
+        )}
 
         <button
           onClick={() => setIsJoiningWorkspace(true)}
@@ -3315,7 +3280,7 @@ const Dashboard = () => {
                                 await fetchChannels();
                                 joinChannel(res.data._id);
                                 setIsSearching(false);
-                              } catch (err) { setError('Failed to start conversation'); }
+                              } catch { setError('Failed to start conversation'); }
                             }}
                             style={{ padding: '12px 16px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.02)', marginBottom: '4px', cursor: 'pointer', transition: 'var(--transition)', display: 'flex', alignItems: 'center', gap: '12px' }}
                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.1)'}
